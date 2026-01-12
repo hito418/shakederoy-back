@@ -1,5 +1,5 @@
 import { sValidator } from '@hono/standard-validator'
-import { userRolesEnum, users } from '@repo/schemas/users'
+import { userRolesEnum } from '@repo/schemas/users'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { setSignedCookie } from 'hono/cookie'
