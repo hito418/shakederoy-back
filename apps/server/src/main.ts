@@ -4,7 +4,7 @@ import './lib/env'
 import { db } from './lib/db'
 import authRoute from './routes/auth'
 import { cors } from 'hono/cors'
-// import usersRoute from './routes/users'
+import usersRoute from './routes/users'
 import { HonoVar } from './lib/hono'
 import { env } from 'hono/adapter'
 // import seedDb from './lib/seed'
@@ -27,7 +27,7 @@ const app = new HonoVar()
     })
   )
   .route('/', authRoute)
-  // .route('/', usersRoute)
+  .route('/', usersRoute)
 
 if (process?.env?.NODE_ENV === 'DEV') {
   showRoutes(app)
