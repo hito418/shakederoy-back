@@ -20,17 +20,26 @@ FROM base AS builder
 WORKDIR /app
 
 COPY --from=prune /app/out/json .
-RUN pnpm install --frozen-lockfile --ignore-scripts
+RUN pnpm install --frozen-lockfile --ignore-scripts --store-dir=/pnpm/store
 
 COPY --from=prune /app/out/full/ .
 RUN pnpm turbo run build
 
+FROM base AS deps
+WORKDIR /app
+
+COPY --from=prune /app/out/json .
+COPY --from=builder /pnpm/store /pnpm/store
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts --store-dir=/pnpm/store --prefer-offline --shamefully-hoist
+
 FROM node:24-alpine AS runner
+WORKDIR /app
 
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 app
 USER app
 
-COPY --from=builder --chown=app:nodejs /app/apps/server/dist ./dist
+COPY --from=builder --chown=app:nodejs /app/apps/server/dist ./apps/server/dist
+COPY --from=deps /app/node_modules ./node_modules
 
-CMD ["node", "dist/server/main.mjs"]
+CMD ["node", "apps/server/dist/main.js"]

@@ -10,8 +10,11 @@ services:
     restart: always
     expose:
       - "5432"
-    ports:
-      - '5432:5432'
+    networks:
+      - shakederoy_backend
 
 volumes:
   shakederoy_database:
+
+networks:
+  shakederoy_backend:

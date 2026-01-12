@@ -1,5 +1,4 @@
 import { sValidator } from '@hono/standard-validator'
-import { userRolesEnum } from '@repo/schemas/users'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { setSignedCookie } from 'hono/cookie'
@@ -127,7 +126,7 @@ usersRoute.post(
       username: 'string > 2',
       email: 'string.email',
       password: 'string > 7',
-      role: type.enumerated(...userRolesEnum.enumValues),
+      role: '"admin" | "user"',
     })
   ),
   async (ctx) => {
@@ -247,7 +246,7 @@ usersRoute.put(
       city: 'string | null?',
       region: 'string | null?',
       zipCode: 'string | null?',
-      role: type.enumerated(...userRolesEnum.enumValues).optional(),
+      role: '"admin" | "user"?',
     })
   ),
   async (ctx) => {

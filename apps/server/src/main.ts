@@ -1,13 +1,13 @@
-import { showRoutes } from 'hono/dev'
 import { serve } from '@hono/node-server'
-import './lib/env'
-import { db } from './lib/db'
-import authRoute from './routes/auth'
-import { cors } from 'hono/cors'
-import usersRoute from './routes/users'
-import { HonoVar } from './lib/hono'
 import { env } from 'hono/adapter'
+import { cors } from 'hono/cors'
+import { showRoutes } from 'hono/dev'
+import { db } from './lib/db'
+import './lib/env'
+import { HonoVar } from './lib/hono'
+import authRoute from './routes/auth'
 import cocktailsRoute from './routes/cocktails'
+import usersRoute from './routes/users'
 // import seedDb from './lib/seed'
 
 if (process?.env?.NODE_ENV === 'DEV') {
@@ -35,7 +35,7 @@ if (process?.env?.NODE_ENV === 'DEV') {
   showRoutes(app)
 }
 
-serve(
+const server = serve(
   {
     fetch: app.fetch,
     port: 3000,
@@ -45,9 +45,11 @@ serve(
 
 process.on('SIGTERM', () => {
   console.log('SIGTERM received: closing HTTP server')
+  server.close()
   process.exit(0)
 })
 process.on('SIGINT', () => {
   console.log('SIGINT received: closing HTTP server')
+  server.close()
   process.exit(0)
 })

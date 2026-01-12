@@ -6,5 +6,8 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
+    env_file: ./apps/server/.env
     ports:
-      - 4000:4000
+      - 3000:3000
+    networks:
+      - shakederoy_backend

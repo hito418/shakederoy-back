@@ -1,4 +1,4 @@
-import { userRolesEnum } from '@repo/schemas/users'
+import type { User } from '@repo/schemas/users'
 import { env } from 'hono/adapter'
 import { getSignedCookie } from 'hono/cookie'
 import { verify } from 'hono/jwt'
@@ -6,7 +6,7 @@ import { type HonoVarMiddleware } from 'src/lib/hono'
 import { Payload } from 'src/types/payload'
 
 export const isAuth: (
-  ...roleList: (typeof userRolesEnum.enumValues)[number][]
+  ...roleList: (User["role"])[]
 ) => HonoVarMiddleware<{ userPayload: Payload }> = function (...roleList) {
   return async (ctx, next) => {
     const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
@@ -25,7 +25,7 @@ export const isAuth: (
     if (
       roleList.length > 0 &&
       !roleList.includes(
-        payload.role as (typeof userRolesEnum.enumValues)[number]
+        payload.role as User["role"]
       )
     ) {
       return ctx.json({ message: 'Unauthorized' }, 401)
