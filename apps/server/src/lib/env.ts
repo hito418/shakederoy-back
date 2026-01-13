@@ -18,6 +18,7 @@ const envSchema = type({
 const result = envSchema(process.env)
 if (result instanceof type.errors) {
   console.error('Invalid Environment Variables')
+  console.error(result)
   process.exit(1)
 }
 
