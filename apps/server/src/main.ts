@@ -31,7 +31,7 @@ const app = new HonoVar()
   .route('/', usersRoute)
   .route('/', cocktailsRoute)
 
-if (process?.env?.NODE_ENV === 'DEV') {
+if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
   showRoutes(app)
 }
 
