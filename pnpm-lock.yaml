@@ -95,6 +95,13 @@ importers:
         version: 5.9.3
 
   packages/schemas:
+    dependencies:
+      drizzle-kit:
+        specifier: ^0.22.8
+        version: 0.22.8
+      pg:
+        specifier: 'catalog:'
+        version: 8.16.3
     devDependencies:
       '@repo/oxlint-config':
         specifier: workspace:*
@@ -102,18 +109,12 @@ importers:
       '@repo/ts-config':
         specifier: workspace:*
         version: link:../../toolings/ts-config
-      drizzle-kit:
-        specifier: ^0.22.8
-        version: 0.22.8
       drizzle-orm:
         specifier: ^0.31.4
         version: 0.31.4(@types/pg@8.16.0)(kysely@0.27.6)(pg@8.16.3)
       oxlint:
         specifier: 'catalog:'
         version: 1.38.0
-      pg:
-        specifier: 'catalog:'
-        version: 8.16.3
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
