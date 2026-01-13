@@ -6,7 +6,5 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
-    ports:
-      - 3000:3000
     networks:
       - shakederoy_backend
