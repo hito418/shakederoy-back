@@ -17,5 +17,6 @@ services:
       CORS_ORIGIN: ${CORS_ORIGIN}
       NODE_ENV: ${NODE_ENV}
       APP_PORT: ${APP_PORT}
+      PAGE_SIZE: ${PAGE_SIZE}
     networks:
       - shakederoy_backend

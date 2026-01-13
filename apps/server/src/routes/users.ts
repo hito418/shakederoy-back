@@ -17,7 +17,6 @@ usersRoute.get(
     const { page = 1 } = ctx.req.valid('query')
 
     const pageSize = Number(env(ctx).PAGE_SIZE)
-    console.log('Page Size:', pageSize)
 
     const userList = await db
       .selectFrom('users')
