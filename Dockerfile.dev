@@ -2,6 +2,8 @@ FROM node:23.7.0-alpine
 
 WORKDIR /app
 
+COPY . .
+
 RUN npm i -g corepack
 
 RUN corepack enable
