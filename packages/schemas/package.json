@@ -12,13 +12,15 @@
     "build": "tsc",
     "dev": "pnpm drizzle:studio"
   },
+  "dependencies": {
+    "drizzle-kit": "^0.22.8",
+    "pg": "catalog:"
+  },
   "devDependencies": {
     "@repo/oxlint-config": "workspace:*",
     "@repo/ts-config": "workspace:*",
-    "drizzle-kit": "^0.22.8",
     "drizzle-orm": "^0.31.4",
     "oxlint": "catalog:",
-    "pg": "catalog:",
     "typescript": "catalog:"
   },
   "files": [
