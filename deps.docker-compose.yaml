@@ -18,4 +18,3 @@ volumes:
 
 networks:
   shakederoy_backend:
-    external: true
