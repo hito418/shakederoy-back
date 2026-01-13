@@ -6,5 +6,16 @@ services:
     build:
       context: .
       dockerfile: apps/server/Dockerfile
+    environment:
+      PG_HOST: ${PG_HOST}
+      PG_PORT: ${PG_PORT}
+      PG_DB: ${PG_DB}
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      NODE_ENV: ${NODE_ENV}
+      APP_PORT: ${APP_PORT}
     networks:
       - shakederoy_backend
