@@ -38,7 +38,7 @@ if (process?.env?.NODE_ENV === 'DEV') {
 const server = serve(
   {
     fetch: app.fetch,
-    port: 3000,
+    port: Number(process.env.APP_PORT) || 3000,
   },
   (info) => console.log(`Listening on http://localhost:${info.port}`)
 )

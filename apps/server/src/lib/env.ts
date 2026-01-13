@@ -9,6 +9,7 @@ const envSchema = type({
   COOKIE_SECRET: 'string',
   JWT_SECRET: 'string', 
   CORS_ORIGIN: 'string',
+  APP_PORT: 'string.numeric',
   // PAGE_SIZE: type.string.default('15'),
   // MAX_FILE_SIZE: type.string.default((10 * 1024 * 1024).toString()),
   NODE_ENV: '"DEV" | "PROD"',
