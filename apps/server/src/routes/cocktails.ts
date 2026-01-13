@@ -2,6 +2,7 @@ import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { HonoVar } from 'src/lib/hono'
+import { isAuth } from 'src/middlewares/isAuth'
 
 const cocktailsRoute = new HonoVar().basePath('/cocktails')
 
@@ -39,7 +40,7 @@ cocktailsRoute.get(
   }
 
   return ctx.json(cocktail, 200)
-}).post('/create', sValidator('json', type({
+}).post('/create', isAuth(), sValidator('json', type({
   name: 'string > 3',
   description: 'string > 5',
   ingredients: 'string',
@@ -60,7 +61,7 @@ cocktailsRoute.get(
     .executeTakeFirst()
 
   return ctx.json(newCocktail, 201)
-}).post('/:id', sValidator('param', type({ id: 'string' })), sValidator('json', type({
+}).post('/:id', isAuth(), sValidator('param', type({ id: 'string' })), sValidator('json', type({
   name: 'string > 3?',
   description: 'string > 5?',
   ingredients: 'string?',
@@ -88,7 +89,7 @@ cocktailsRoute.get(
   }
 
   return ctx.json(updatedCocktail, 200)
-}).delete('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
+}).delete('/:id', isAuth(), sValidator('param', type({ id: 'string' })), async (ctx) => {
   const db = ctx.get('database')
   const { id } = ctx.req.param()
 
