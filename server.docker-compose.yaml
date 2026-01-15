@@ -1,6 +1,3 @@
-include:
-  - path: deps.docker-compose.yaml
-
 services:
   server:
     build:
@@ -18,5 +15,3 @@ services:
       NODE_ENV: ${NODE_ENV}
       APP_PORT: ${APP_PORT}
       PAGE_SIZE: ${PAGE_SIZE}
-    networks:
-      - shakederoy_backend
