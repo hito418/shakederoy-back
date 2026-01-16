@@ -8,6 +8,7 @@ import { HonoVar } from './lib/hono'
 import authRoute from './routes/auth'
 import cocktailsRoute from './routes/cocktails'
 import usersRoute from './routes/users'
+import { Context } from 'hono'
 // import seedDb from './lib/seed'
 
 if (process?.env?.NODE_ENV === 'DEV') {
@@ -27,9 +28,17 @@ const app = new HonoVar()
       credentials: true,
     })
   )
+  .use(async (ctx, next) => {
+    console.log(`[${ctx.req.method}] ${ctx.req.url}`)
+    
+    await next()
+  })
   .route('/', authRoute)
   .route('/', usersRoute)
   .route('/', cocktailsRoute)
+  .get('/healthcheck', (ctx) => {
+    return ctx.json({ status: 'ok' }, 200)
+  })
 
 if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
   showRoutes(app)
