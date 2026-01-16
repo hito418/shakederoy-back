@@ -1,6 +1,8 @@
 services:
   server:
-    image: martni/shakederoy:latest
+    build:
+      context: .
+      dockerfile: ./apps/server/Dockerfile
     environment:
       PG_HOST: ${PG_HOST}
       PG_PORT: ${PG_PORT}
