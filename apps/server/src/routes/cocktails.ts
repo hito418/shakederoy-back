@@ -23,6 +23,8 @@ cocktailsRoute.get(
       .orderBy('updated_at', 'desc')
       .execute()
 
+      console.log("cocktailList", cocktailList)
+
       return ctx.json(cocktailList, 200)
   }
 ).get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
