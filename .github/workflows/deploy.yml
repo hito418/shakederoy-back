@@ -24,6 +24,7 @@ jobs:
   deploy:
     environment: production
     runs-on: ubuntu-latest
+    needs: build
     steps:
       - name: deploy backend
         env:
