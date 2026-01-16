@@ -27,6 +27,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: deploy backend
-        run: curl -X POST ${{ secrets.DEPLOYMENT_HOST }}/compose.redeploy 
-          -H "Content-Type: application/json" 
-          -d '{"composeId":"${{ secrets.COMPOSE_ID }}","title":"osef","description":"osef"}'
+        run: curl -X POST ${{ secrets.DEPLOYMENT_HOST }}/compose.redeploy -H "Content-Type: application/json" -d '{"composeId":"${{ secrets.COMPOSE_ID }}","title":"osef","description":"osef"}'
