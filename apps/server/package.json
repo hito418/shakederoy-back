@@ -13,8 +13,7 @@
     "start": "node --env-file .env dist/main.js",
     "start:no-env": "node dist/main.js",
     "dev": "tsx --env-file .env --watch src/main.ts",
-    "seed": "tsx --env-file .env src/scripts/seed.ts",
-    "seed:no-env": "tsx src/scripts/seed.ts"
+    "seed": "tsx --env-file .env src/scripts/seed.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.10.0",

@@ -1,8 +1,0 @@
-services:
-  reverse-proxy:
-    image: nginx:1.29.4
-    environment:
-      API_ADDRESS: ${API_ADDRESS}
-      API_PORT: ${API_PORT}
-    volumes:
-      - ./nginx.conf:/etc/nginx/templates/default.conf.template

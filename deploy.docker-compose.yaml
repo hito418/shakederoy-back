@@ -1,0 +1,56 @@
+services:
+  reverse-proxy:
+    image: nginx:1.29.4
+    environment:
+      API_ADDRESS: server
+      API_PORT: ${API_PORT}
+    networks:
+      - shakederoy_proxy
+    volumes:
+      - ./nginx.conf:/etc/nginx/templates/default.conf.template
+  server:
+    build:
+      context: .
+      dockerfile: ./apps/server/Dockerfile
+    environment:
+      PG_HOST: ${PG_HOST}
+      PG_PORT: ${PG_PORT}
+      PG_DB: ${PG_DB}
+      PG_USER: ${PG_USER}
+      PG_PASSWORD: ${PG_PASSWORD}
+      COOKIE_SECRET: ${COOKIE_SECRET}
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      NODE_ENV: ${NODE_ENV}
+      APP_PORT: ${APP_PORT}
+      PAGE_SIZE: ${PAGE_SIZE}
+    networks:
+      - shakederoy_backend
+      - shakederoy_proxy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/healthcheck"]
+      interval: 1m30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+      start_interval: 5s
+  postgres:
+    image: postgres:16.1-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    networks:
+      - shakederoy_backend
+    volumes:
+      - shakederoy_database:/var/lib/postgresql/data
+    restart: always
+    expose:
+      - "5432"
+
+volumes:
+  shakederoy_database:
+
+networks:
+  shakederoy_backend:
+  shakederoy_proxy:
