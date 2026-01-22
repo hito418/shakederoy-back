@@ -1,4 +1,4 @@
-name: Deploy Backend
+name: Deploy Backend - Production
 
 on:
   push:
@@ -6,7 +6,6 @@ on:
 
 jobs:
   build:
-    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repo
