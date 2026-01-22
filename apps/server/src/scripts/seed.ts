@@ -73,7 +73,7 @@ async function seedCocktails() {
     const garnish = faker.helpers.arrayElement(garnishes)
     const glass = faker.helpers.arrayElement(glassware)
 
-    const name = `${flavor} ${spirit} ${style}`
+    const name = `${flavor} ${spirit} ${style}: ${faker.lorem.word({ strategy: 'any-length' })}-${faker.lorem.word({ strategy: 'any-length' })}`
 
     const ingredients = [
       `${faker.number.int({ min: 30, max: 60 })}ml ${spirit.toLowerCase()}`,
@@ -119,7 +119,7 @@ async function seed() {
     if (process.env.NODE_ENV !== 'PROD') {
       await seedUsers()
     }
-    
+
     await seedCocktails()
 
     console.log('\nSeeding completed!')
