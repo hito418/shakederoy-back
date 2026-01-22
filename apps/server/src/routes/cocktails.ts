@@ -24,8 +24,6 @@ cocktailsRoute
         .orderBy('updated_at', 'desc')
         .execute()
 
-      console.log('cocktailList', cocktailList)
-
       return ctx.json(cocktailList, 200)
     }
   )
