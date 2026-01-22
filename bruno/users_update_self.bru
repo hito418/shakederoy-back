@@ -1,0 +1,23 @@
+meta {
+  name: users_update_self
+  type: http
+  seq: 9
+}
+
+put {
+  url: {{host}}/users/self
+  body: json
+  auth: none
+}
+
+body:json {
+   {
+     "username": "username",
+     "email": "email@test.com",
+     "password": "passwordd",
+     "phoneNumber": "0000000000",
+     "city": "city",
+     "region": "region",
+     "zipCode": "33000"
+   }
+}

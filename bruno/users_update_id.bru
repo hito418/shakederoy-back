@@ -1,0 +1,27 @@
+meta {
+  name: users_update_id
+  type: http
+  seq: 10
+}
+
+put {
+  url: {{host}}/users/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+body:json {
+   {
+     "username": "username",
+     "email": "email@test.com",
+     "password": "passwordd",
+     "phoneNumber": "0000000000",
+     "city": "city",
+     "region": "region",
+     "zipCode": "33000"
+   }
+}

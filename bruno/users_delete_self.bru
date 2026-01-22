@@ -1,0 +1,23 @@
+meta {
+  name: users_delete_self
+  type: http
+  seq: 11
+}
+
+delete {
+  url: {{host}}/users/self
+  body: none
+  auth: none
+}
+
+body:json {
+   {
+     "username": "username",
+     "email": "email@test.com",
+     "password": "passwordd",
+     "phoneNumber": "0000000000",
+     "city": "city",
+     "region": "region",
+     "zipCode": "33000"
+   }
+}

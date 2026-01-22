@@ -1,0 +1,25 @@
+meta {
+  name: cocktails_id
+  type: http
+  seq: 15
+}
+
+get {
+  url: {{host}}/cocktails/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+body:json {
+  {
+          "name": "name",
+          "description": "string > 5",
+          "ingredients": "string",
+          "instructions": "string"
+    
+  }
+}

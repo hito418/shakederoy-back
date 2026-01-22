@@ -1,0 +1,21 @@
+meta {
+  name: cocktails_create
+  type: http
+  seq: 16
+}
+
+post {
+  url: {{host}}/cocktails/create
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+          "name": "name",
+          "description": "string > 5",
+          "ingredients": "string",
+          "instructions": "string"
+    
+  }
+}

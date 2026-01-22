@@ -1,0 +1,23 @@
+meta {
+  name: cocktails_update
+  type: http
+  seq: 17
+}
+
+post {
+  url: {{host}}/cocktails/:id
+  body: json
+  auth: none
+}
+
+params:path {
+  id: 
+}
+
+body:json {
+  {
+          "name": "new name",
+          "description": "string > 5"
+    
+  }
+}
