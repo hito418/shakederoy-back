@@ -1,8 +1,8 @@
 import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
-import { HonoVar } from 'src/lib/hono'
-import { isAuth } from 'src/middlewares/isAuth'
+import { HonoVar } from 'src/shared/hono'
+import { isAuth } from 'src/features/auth/middleware'
 
 const cocktailsRoute = new HonoVar().basePath('/cocktails')
 

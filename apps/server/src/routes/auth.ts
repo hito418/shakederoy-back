@@ -1,12 +1,11 @@
 import { sValidator } from '@hono/standard-validator'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
-import { Payload } from '../types/payload'
-import { sign, verify as verifyJwt } from 'hono/jwt'
-import { isAuth } from 'src/middlewares/isAuth'
+import { verify as verifyJwt } from 'hono/jwt'
+import { isAuth } from 'src/features/auth/middleware'
+import { initAdmin, registerUser, loginUser, createToken } from 'src/features/auth/service'
 import { env } from 'hono/adapter'
 import { type } from 'arktype'
-import { HonoVar } from 'src/lib/hono'
-import { hash, verify } from '@node-rs/argon2'
+import { HonoVar } from 'src/shared/hono'
 
 const authRoute = new HonoVar()
   .basePath('/auth')
@@ -15,45 +14,24 @@ const authRoute = new HonoVar()
     sValidator(
       'json',
       type({
-        username: 'string > 3',
         email: 'string.email',
         password: 'string > 8',
       })
     ),
     async (ctx) => {
-      const { username, email, password } = ctx.req.valid('json')
+      const { email, password } = ctx.req.valid('json')
       const db = ctx.get('database')
 
-      const userList = await db
-        .selectFrom('users')
-        .select('id')
-        .limit(1)
-        .execute()
+      const result = await initAdmin(db, email, password)
 
-      if (userList.length > 0) {
-        return ctx.json({ message: 'Initialization already done' }, 400)
+      if ('error' in result) {
+        if (result.error === 'already_initialized') {
+          return ctx.json({ message: 'Initialization already done' }, 400)
+        }
+        return ctx.json({ message: 'Failed to register' }, 500)
       }
 
-      const hashedPassword = await hash(password)
-
-      const user = await db
-        .insertInto('users')
-        .values({
-          username,
-          email,
-          password: hashedPassword,
-          role: 'admin',
-        })
-        .returningAll()
-        .executeTakeFirst()
-
-      if (user) {
-        const { password: _, ...safeUser } = user
-
-        return ctx.json(safeUser, 201)
-      }
-
-      return ctx.json({ message: 'Failed to register' }, 500)
+      return ctx.json(result.user, 201)
     }
   )
   .post(
@@ -61,48 +39,25 @@ const authRoute = new HonoVar()
     sValidator(
       'json',
       type({
-        username: 'string > 3',
         email: 'string.email',
         password: 'string > 8',
       })
     ),
     async (ctx) => {
-      const { username, email, password } = ctx.req.valid('json')
+      const { email, password } = ctx.req.valid('json')
       const db = ctx.get('database')
 
-      const hashedPassword = await hash(password)
+      const result = await registerUser(db, email, password)
 
-      const user = await db
-        .insertInto('users')
-        .values({
-          username,
-          email,
-          password: hashedPassword,
-        })
-        .returningAll()
-        .executeTakeFirst()
-
-      if (user) {
-        const { password: _, ...safeUser } = user
-
-        const payload: Payload = {
-          sub: {
-            id: safeUser.id,
-            username: safeUser.username,
-          },
-          role: user.role,
-        }
-
-        const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
-
-        const token = await sign(payload, JWT_SECRET)
-
-        await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
-
-        return ctx.json(payload, 201)
+      if ('error' in result) {
+        return ctx.json({ message: 'Failed to register' }, 500)
       }
 
-      return ctx.json({ message: 'Failed to register' }, 500)
+      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
+      const token = await createToken(result.payload, JWT_SECRET)
+      await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
+
+      return ctx.json(result.payload, 201)
     }
   )
   .post(
@@ -138,39 +93,20 @@ const authRoute = new HonoVar()
       const { credential, password } = ctx.req.valid('json')
       const db = ctx.get('database')
 
-      const user = await db
-        .selectFrom('users')
-        .selectAll()
-        .where((eb) =>
-          eb.or([eb('username', '=', credential), eb('email', '=', credential)])
-        )
-        .executeTakeFirst()
+      const result = await loginUser(db, credential, password)
 
-      if (!user) {
-        return ctx.json({ message: 'User not found' }, 404)
-      }
-
-      const isMatch = await verify(user.password, password)
-
-      if (isMatch) {
-        const payload: Payload = {
-          sub: {
-            id: user.id,
-            username: user.username,
-          },
-          role: user.role,
+      if ('error' in result) {
+        if (result.error === 'not_found') {
+          return ctx.json({ message: 'User not found' }, 404)
         }
-
-        const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
-
-        const token = await sign(payload, JWT_SECRET)
-
-        await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
-
-        return ctx.json(payload, 200)
+        return ctx.json({ message: 'Wrong password' }, 401)
       }
 
-      return ctx.json({ message: 'Wrong password' }, 401)
+      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
+      const token = await createToken(result.payload, JWT_SECRET)
+      await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
+
+      return ctx.json(result.payload, 200)
     }
   )
   .get('/logout', isAuth(), async (ctx) => {

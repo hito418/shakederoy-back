@@ -3,9 +3,9 @@ import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { setSignedCookie } from 'hono/cookie'
 import { sign } from 'hono/jwt'
-import { HonoVar } from 'src/lib/hono'
-import { isAuth } from 'src/middlewares/isAuth'
-import { Payload } from 'src/types/payload'
+import { HonoVar } from 'src/shared/hono'
+import { isAuth } from 'src/features/auth/middleware'
+import { Payload } from 'src/shared/types/payload'
 
 const usersRoute = new HonoVar().basePath('/users')
 
@@ -22,7 +22,6 @@ usersRoute.get(
       .selectFrom('users')
       .select([
         'id',
-        'username',
         'email',
         'role',
         'profile_pic',
@@ -45,7 +44,6 @@ usersRoute.get('/all', async (ctx) => {
     .selectFrom('users')
     .select([
       'id',
-      'username',
       'email',
       'role',
       'profile_pic',
@@ -66,7 +64,6 @@ usersRoute.get('/self', isAuth(), async (ctx) => {
     .selectFrom('users')
     .select([
       'id',
-      'username',
       'email',
       'role',
       'profile_pic',
@@ -84,29 +81,28 @@ usersRoute.get('/self', isAuth(), async (ctx) => {
 })
 
 usersRoute.get(
-  '/:username',
+  '/:id',
   sValidator(
     'param',
     type({
-      username: 'string',
+      id: 'string',
     })
   ),
   async (ctx) => {
     const db = ctx.get('database')
-    const { username } = ctx.req.valid('param')
+    const { id } = ctx.req.valid('param')
 
     const user = await db
       .selectFrom('users')
       .select([
         'id',
-        'username',
         'email',
         'role',
         'profile_pic',
         'created_at',
         'updated_at',
       ])
-      .where('username', '=', username)
+      .where('id', '=', id)
       .executeTakeFirst()
 
     if (!user) {
@@ -123,7 +119,6 @@ usersRoute.post(
   sValidator(
     'json',
     type({
-      username: 'string > 2',
       email: 'string.email',
       password: 'string > 7',
       role: '"admin" | "user"',
@@ -131,19 +126,17 @@ usersRoute.post(
   ),
   async (ctx) => {
     const db = ctx.get('database')
-    const { username, email, password, role } = ctx.req.valid('json')
+    const { email, password, role } = ctx.req.valid('json')
 
     const user = await db
       .insertInto('users')
       .values({
-        username,
         email,
         password,
         role,
       })
       .returning([
         'id',
-        'username',
         'email',
         'role',
         'profile_pic',
@@ -166,7 +159,6 @@ usersRoute.put(
   sValidator(
     'form',
     type({
-      username: 'string > 2?',
       email: 'string.email?',
       password: 'string > 7?',
       phoneNumber: 'string | null?',
@@ -195,7 +187,6 @@ usersRoute.put(
       .where('id', '=', payload.sub.id)
       .returning([
         'id',
-        'username',
         'email',
         'role',
         'profile_pic',
@@ -211,7 +202,6 @@ usersRoute.put(
     const newPayload: Payload = {
       sub: {
         id: user.id,
-        username: user.username,
       },
       role: user.role,
     }
@@ -238,7 +228,6 @@ usersRoute.put(
   sValidator(
     'form',
     type({
-      username: 'string > 2?',
       email: 'string.email?',
       password: 'string > 7?',
       phoneNumber: 'string | null?',
@@ -269,7 +258,6 @@ usersRoute.put(
       .where('id', '=', id)
       .returning([
         'id',
-        'username',
         'email',
         'role',
         'profile_pic',
@@ -286,7 +274,6 @@ usersRoute.put(
       const newPayload: Payload = {
         sub: {
           id: user.id,
-          username: user.username,
         },
         role: user.role,
       }

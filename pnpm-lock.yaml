@@ -84,6 +84,9 @@ importers:
       '@types/pg':
         specifier: ^8.11.5
         version: 8.16.0
+      oxlint:
+        specifier: 'catalog:'
+        version: 1.38.0
       tsup:
         specifier: ^8.5.0
         version: 8.5.1(tsx@4.21.0)(typescript@5.9.3)

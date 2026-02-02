@@ -2,8 +2,8 @@ import type { User } from '@repo/schemas/users'
 import { env } from 'hono/adapter'
 import { getSignedCookie } from 'hono/cookie'
 import { verify } from 'hono/jwt'
-import { type HonoVarMiddleware } from 'src/lib/hono'
-import { Payload } from 'src/types/payload'
+import { type HonoVarMiddleware } from 'src/shared/hono'
+import { Payload } from 'src/shared/types/payload'
 
 export const isAuth: (
   ...roleList: (User["role"])[]

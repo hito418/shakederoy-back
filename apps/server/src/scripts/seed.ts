@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { hash } from '@node-rs/argon2'
-import { db } from '../lib/db'
+import { db } from '../shared/db'
 
 const USERS_COUNT = 50
 const COCKTAILS_COUNT = 100
@@ -12,7 +12,6 @@ async function seedUsers() {
   const users = []
 
   users.push({
-    username: 'admin',
     email: 'admin@shakederoy.com',
     password: await hash('AdminPassword123!'),
     role: 'admin' as const,
@@ -23,7 +22,6 @@ async function seedUsers() {
     const firstName = faker.person.firstName()
     const lastName = faker.person.lastName()
     users.push({
-      username: faker.internet.userName({ firstName, lastName }).toLowerCase(),
       email: faker.internet.email({ firstName, lastName }).toLowerCase(),
       password: await hash('AdminPass123!'),
       role: 'admin' as const,
@@ -35,7 +33,6 @@ async function seedUsers() {
     const firstName = faker.person.firstName()
     const lastName = faker.person.lastName()
     users.push({
-      username: faker.internet.userName({ firstName, lastName }).toLowerCase(),
       email: faker.internet.email({ firstName, lastName }).toLowerCase(),
       password: await hash('UserPassword123!'),
       role: 'user' as const,
