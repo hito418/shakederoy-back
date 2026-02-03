@@ -7,7 +7,7 @@
   "license": "UNLICENSED",
   "type": "module",
   "scripts": {
-    "build": "tsup src/main.ts",
+    "build": "tsdown src/main.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "oxlint -c oxlintrc.json src",
     "start": "node --env-file .env dist/main.js",
@@ -37,7 +37,7 @@
     "@types/node": "^20.3.1",
     "@types/pg": "^8.11.5",
     "oxlint": "catalog:",
-    "tsup": "^8.5.0",
+    "tsdown": "^0.20.1",
     "tsx": "^4.20.5",
     "typescript": "catalog:"
   }

@@ -42,4 +42,4 @@ USER app
 COPY --from=builder --chown=app:nodejs /app .
 # COPY --from=deps /app/node_modules ./node_modules
 
-CMD ["node", "apps/server/dist/main.js"]
+CMD ["node", "apps/server/dist/main.mjs"]

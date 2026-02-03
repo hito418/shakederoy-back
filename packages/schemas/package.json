@@ -9,33 +9,32 @@
     "migration:generate": "drizzle-kit generate",
     "migration:run": "drizzle-kit migrate",
     "drizzle:studio": "drizzle-kit studio --host=0.0.0.0",
-    "build": "tsc",
+    "build": "tsdown src/index.ts src/schemas/*.ts",
     "dev": "pnpm drizzle:studio"
   },
   "dependencies": {
     "drizzle-kit": "^0.22.8",
-    "pg": "catalog:"
-  },
-  "devDependencies": {
     "@repo/oxlint-config": "workspace:*",
     "@repo/ts-config": "workspace:*",
     "drizzle-orm": "^0.31.4",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "tsdown": "^0.20.1",
+    "typescript": "catalog:",
+    "pg": "catalog:"
   },
   "files": [
     "dist"
   ],
   "exports": {
     ".": {
-      "source": "./src/index.ts",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.d.ts"
+      "source": "./src/index.mts",
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.d.mts"
     },
     "./*": {
-      "source": "./src/schemas/*.ts",
-      "types": "./dist/schemas/*.d.ts",
-      "import": "./dist/schemas/*.d.ts"
+      "source": "./src/schemas/*.mts",
+      "types": "./dist/schemas/*.d.mts",
+      "import": "./dist/schemas/*.d.mts"
     }
   }
 }
