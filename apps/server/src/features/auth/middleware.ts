@@ -1,37 +1,37 @@
 import type { User } from '@repo/schemas/users'
 import { env } from 'hono/adapter'
 import { getSignedCookie } from 'hono/cookie'
-import { verify } from 'hono/jwt'
 import { type HonoVarMiddleware } from 'src/shared/hono'
-import { Payload } from 'src/shared/types/payload'
+import { validateSession, type SessionPayload } from './session-service'
 
 export const isAuth: (
   ...roleList: (User["role"])[]
-) => HonoVarMiddleware<{ userPayload: Payload }> = function (...roleList) {
+) => HonoVarMiddleware<{ userPayload: SessionPayload }> = function (...roleList) {
   return async (ctx, next) => {
-    const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
-    const token = await getSignedCookie(ctx, COOKIE_SECRET, 'access_token')
+    const { COOKIE_SECRET } = env(ctx)
+    const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
-    if (!token) {
+    if (!sessionId) {
       return ctx.json({ message: 'Unauthorized' }, 401)
     }
 
-    const payload = await verify(token, JWT_SECRET)
+    const db = ctx.get('database')
+    const result = await validateSession(db, sessionId)
 
-    if (!payload) {
-      return ctx.json({ message: 'Unauthorized' }, 401)
+    if (result.isErr()) {
+      return ctx.json({ message: result.error.message }, 401)
     }
+
+    const payload = result.value
 
     if (
       roleList.length > 0 &&
-      !roleList.includes(
-        payload.role as User["role"]
-      )
+      !roleList.includes(payload.role)
     ) {
       return ctx.json({ message: 'Unauthorized' }, 401)
     }
 
-    ctx.set('userPayload', payload as Payload)
+    ctx.set('userPayload', payload)
 
     await next()
   }

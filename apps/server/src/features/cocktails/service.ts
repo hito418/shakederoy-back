@@ -1,19 +1,17 @@
-import type { Kysely, Selectable } from 'kysely'
 import type { Database } from '@repo/schemas'
+import { Cocktail, CocktailInsert, CocktailUpdate } from '@repo/schemas/cocktails'
+import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
+import { dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
-import { dbQueryMany, dbQueryFirst, dbInsert, dbUpdate, dbDelete } from 'src/shared/db-helpers'
 
 type DB = Kysely<Database>
-type CocktailRow = Selectable<Database['cocktails']>
-
-export type { CocktailRow }
 
 export function listCocktails(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<CocktailRow[], AppError> {
+): ResultAsync<Cocktail[], AppError> {
   return dbQueryMany(() =>
     db
       .selectFrom('cocktails')
@@ -25,7 +23,7 @@ export function listCocktails(
   )
 }
 
-export function getCocktailById(db: DB, id: string): ResultAsync<CocktailRow, AppError> {
+export function getCocktailById(db: DB, id: string): ResultAsync<Cocktail, AppError> {
   return dbQueryFirst(
     () =>
       db
@@ -37,17 +35,10 @@ export function getCocktailById(db: DB, id: string): ResultAsync<CocktailRow, Ap
   )
 }
 
-export type CreateCocktailData = {
-  name: string
-  description: string
-  ingredients: string
-  instructions: string
-}
-
 export function createCocktail(
   db: DB,
-  data: CreateCocktailData
-): ResultAsync<CocktailRow, AppError> {
+  data: CocktailInsert
+): ResultAsync<Cocktail, AppError> {
   return dbInsert(
     () =>
       db
@@ -64,18 +55,11 @@ export function createCocktail(
   )
 }
 
-export type UpdateCocktailData = {
-  name?: string
-  description?: string
-  ingredients?: string
-  instructions?: string
-}
-
 export function updateCocktail(
   db: DB,
   id: string,
-  data: UpdateCocktailData
-): ResultAsync<CocktailRow, AppError> {
+  data: CocktailUpdate
+): ResultAsync<Cocktail, AppError> {
   return dbUpdate(
     () =>
       db
@@ -94,7 +78,7 @@ export function updateCocktail(
   )
 }
 
-export function deleteCocktail(db: DB, id: string): ResultAsync<CocktailRow, AppError> {
+export function deleteCocktail(db: DB, id: string): ResultAsync<Cocktail, AppError> {
   return dbDelete(
     () =>
       db

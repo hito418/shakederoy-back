@@ -1,12 +1,19 @@
 import { sValidator } from '@hono/standard-validator'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
-import { verify as verifyJwt } from 'hono/jwt'
 import { isAuth } from 'src/features/auth/middleware'
-import { initAdmin, registerUser, loginUser, createToken } from 'src/features/auth/service'
+import { initAdmin, registerUser, loginUser } from 'src/features/auth/service'
+import { createSession, validateSession, deleteSession } from 'src/features/auth/session-service'
 import { env } from 'hono/adapter'
 import { type } from 'arktype'
 import { HonoVar } from 'src/shared/hono'
 import { errorToHttpStatus } from 'src/shared/errors'
+
+const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV !== 'DEV',
+  sameSite: 'Lax' as const,
+  path: '/',
+}
 
 const authRoute = new HonoVar()
   .basePath('/auth')
@@ -15,15 +22,16 @@ const authRoute = new HonoVar()
     sValidator(
       'json',
       type({
+        username: 'string >= 3',
         email: 'string.email',
         password: 'string > 8',
       })
     ),
     async (ctx) => {
-      const { email, password } = ctx.req.valid('json')
+      const { username, email, password } = ctx.req.valid('json')
       const db = ctx.get('database')
 
-      const result = await initAdmin(db, email, password)
+      const result = await initAdmin(db, username, email, password)
 
       return result.match(
         (user) => ctx.json(user, 201),
@@ -36,26 +44,27 @@ const authRoute = new HonoVar()
     sValidator(
       'json',
       type({
+        username: 'string >= 3',
         email: 'string.email',
         password: 'string > 8',
       })
     ),
     async (ctx) => {
-      const { email, password } = ctx.req.valid('json')
+      const { username, email, password } = ctx.req.valid('json')
       const db = ctx.get('database')
-      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
+      const { COOKIE_SECRET } = env(ctx)
 
-      const result = await registerUser(db, email, password)
-        .andThen((payload) =>
-          createToken(payload, JWT_SECRET).map((token) => ({ payload, token }))
+      const result = await registerUser(db, username, email, password)
+        .andThen((credentials) =>
+          createSession(db, credentials.id, credentials.username, credentials.role)
         )
 
       if (result.isErr()) {
         return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
       }
 
-      const { payload, token } = result.value
-      await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
+      const { sessionId, payload } = result.value
+      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
 
       return ctx.json(payload, 201)
     }
@@ -63,24 +72,23 @@ const authRoute = new HonoVar()
   .post(
     '/login',
     async (ctx, next) => {
-      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
-      const token = await getSignedCookie(ctx, COOKIE_SECRET, 'access_token')
+      const { COOKIE_SECRET } = env(ctx)
+      const db = ctx.get('database')
+      const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
-      if (!token) {
+      if (!sessionId) {
         await next()
         return
       }
 
-      const payload = await verifyJwt(token, JWT_SECRET)
+      const result = await validateSession(db, sessionId)
 
-      if (!payload) {
+      if (result.isErr()) {
         await next()
         return
       }
 
-      await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
-
-      return ctx.json(payload, 200)
+      return ctx.json(result.value, 200)
     },
     sValidator(
       'json',
@@ -92,25 +100,33 @@ const authRoute = new HonoVar()
     async (ctx) => {
       const { credential, password } = ctx.req.valid('json')
       const db = ctx.get('database')
-      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
+      const { COOKIE_SECRET } = env(ctx)
 
       const result = await loginUser(db, credential, password)
-        .andThen((payload) =>
-          createToken(payload, JWT_SECRET).map((token) => ({ payload, token }))
+        .andThen((credentials) =>
+          createSession(db, credentials.id, credentials.username, credentials.role)
         )
 
       if (result.isErr()) {
         return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
       }
 
-      const { payload, token } = result.value
-      await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
+      const { sessionId, payload } = result.value
+      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
 
       return ctx.json(payload, 200)
     }
   )
   .get('/logout', isAuth(), async (ctx) => {
-    deleteCookie(ctx, 'access_token')
+    const { COOKIE_SECRET } = env(ctx)
+    const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
+
+    if (sessionId) {
+      const db = ctx.get('database')
+      await deleteSession(db, sessionId)
+    }
+
+    deleteCookie(ctx, 'session_id')
     return ctx.text('Logged out', 200)
   })
 

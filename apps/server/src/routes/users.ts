@@ -1,13 +1,11 @@
 import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
-import { setSignedCookie } from 'hono/cookie'
-import { sign } from 'hono/jwt'
+import { deleteCookie, getSignedCookie } from 'hono/cookie'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/middleware'
-import { Payload } from 'src/shared/types/payload'
-import { Errors, errorToHttpStatus } from 'src/shared/errors'
-import { fromPromise } from 'src/shared/db-helpers'
+import { deleteSession } from 'src/features/auth/session-service'
+import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listUsers,
   listAllUsers,
@@ -86,6 +84,7 @@ usersRoute.post(
   sValidator(
     'json',
     type({
+      username: 'string >= 3',
       email: 'string.email',
       password: 'string > 7',
       role: '"admin" | "user"',
@@ -93,9 +92,9 @@ usersRoute.post(
   ),
   async (ctx) => {
     const db = ctx.get('database')
-    const { email, password, role } = ctx.req.valid('json')
+    const { username, email, password, role } = ctx.req.valid('json')
 
-    const result = await createUser(db, email, password, role)
+    const result = await createUser(db, username, email, password, role)
 
     return result.match(
       (user) => ctx.json(user, 201),
@@ -110,6 +109,7 @@ usersRoute.put(
   sValidator(
     'form',
     type({
+      username: 'string >= 3?',
       email: 'string.email?',
       password: 'string > 7?',
       phoneNumber: 'string | null?',
@@ -121,28 +121,14 @@ usersRoute.put(
   async (ctx) => {
     const payload = ctx.get('userPayload')
     const db = ctx.get('database')
-    const { ...updateDatas } = ctx.req.valid('form')
-    const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
+    const updateDatas = ctx.req.valid('form')
 
-    const result = await updateUser(db, payload.sub.id, updateDatas).andThen((user) => {
-      const newPayload: Payload = {
-        sub: { id: user.id },
-        role: user.role,
-      }
-      return fromPromise(
-        sign(newPayload, JWT_SECRET),
-        () => Errors.internalError('Failed to create token')
-      ).map((token) => ({ user, token }))
-    })
+    const result = await updateUser(db, payload.sub.id, updateDatas)
 
-    if (result.isErr()) {
-      return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
-    }
-
-    const { user, token } = result.value
-    await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
-
-    return ctx.json(user, 200)
+    return result.match(
+      (user) => ctx.json(user, 200),
+      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+    )
   }
 )
 
@@ -158,6 +144,7 @@ usersRoute.put(
   sValidator(
     'form',
     type({
+      username: 'string >= 3?',
       email: 'string.email?',
       password: 'string > 7?',
       phoneNumber: 'string | null?',
@@ -170,29 +157,14 @@ usersRoute.put(
   async (ctx) => {
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
-    const { ...updateDatas } = ctx.req.valid('form')
-    const { id: userId } = ctx.get('userPayload').sub
-    const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
+    const updateDatas = ctx.req.valid('form')
 
     const result = await updateUser(db, id, updateDatas)
 
-    if (result.isErr()) {
-      return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
-    }
-
-    const user = result.value
-
-    if (id === userId) {
-      const newPayload: Payload = {
-        sub: { id: user.id },
-        role: user.role,
-      }
-
-      const token = await sign(newPayload, JWT_SECRET)
-      await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
-    }
-
-    return ctx.json(user, 200)
+    return result.match(
+      (user) => ctx.json(user, 200),
+      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+    )
   }
 )
 
@@ -216,8 +188,17 @@ usersRoute.delete(
 usersRoute.delete('/delete/self', isAuth(), async (ctx) => {
   const payload = ctx.get('userPayload')
   const db = ctx.get('database')
+  const { COOKIE_SECRET } = env(ctx)
+  const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
   const result = await deleteUser(db, payload.sub.id)
+
+  if (result.isOk()) {
+    if (sessionId) {
+      await deleteSession(db, sessionId)
+    }
+    deleteCookie(ctx, 'session_id')
+  }
 
   return result.match(
     (user) => ctx.json(user, 200),

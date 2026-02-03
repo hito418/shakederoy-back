@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker'
-import { hash } from '@node-rs/argon2'
+import bcrypt from 'bcrypt'
 import { db } from '../shared/db'
 
 const USERS_COUNT = 50
@@ -12,8 +12,9 @@ async function seedUsers() {
   const users = []
 
   users.push({
+    username: 'admin',
     email: 'admin@shakederoy.com',
-    password: await hash('AdminPassword123!'),
+    password: await bcrypt.hash('AdminPassword123!', 10),
     role: 'admin' as const,
     profile_pic: faker.image.avatar(),
   })
@@ -22,8 +23,9 @@ async function seedUsers() {
     const firstName = faker.person.firstName()
     const lastName = faker.person.lastName()
     users.push({
+      username: faker.internet.userName({ firstName, lastName }).toLowerCase(),
       email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-      password: await hash('AdminPass123!'),
+      password: await bcrypt.hash('AdminPass123!', 10),
       role: 'admin' as const,
       profile_pic: faker.image.avatar(),
     })
@@ -33,8 +35,9 @@ async function seedUsers() {
     const firstName = faker.person.firstName()
     const lastName = faker.person.lastName()
     users.push({
+      username: faker.internet.userName({ firstName, lastName }).toLowerCase(),
       email: faker.internet.email({ firstName, lastName }).toLowerCase(),
-      password: await hash('UserPassword123!'),
+      password: await bcrypt.hash('UserPassword123!', 10),
       role: 'user' as const,
       profile_pic: Math.random() > 0.3 ? faker.image.avatar() : null,
     })
@@ -123,6 +126,7 @@ async function seed() {
 
     if (process.env.NODE_ENV !== 'PROD') {
       console.log('\nAdmin credentials:')
+      console.log('  Username: admin')
       console.log('  Email: admin@shakederoy.com')
       console.log('  Password: AdminPassword123!')
     }

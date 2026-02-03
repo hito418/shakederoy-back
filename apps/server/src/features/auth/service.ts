@@ -1,18 +1,23 @@
-import { hash, verify } from '@node-rs/argon2'
-import { sign } from 'hono/jwt'
-import type { Kysely, Selectable } from 'kysely'
+import bcrypt from 'bcrypt'
 import type { Database } from '@repo/schemas'
-import { Payload } from 'src/shared/types/payload'
+import type { User } from '@repo/schemas/users'
+import type { Kysely } from 'kysely'
 import { ResultAsync, err, ok } from 'neverthrow'
+import { dbInsert, dbQueryFirst, fromPromise } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
-import { fromPromise, dbQueryFirst, dbInsert } from 'src/shared/db-helpers'
 
 type DB = Kysely<Database>
-type UserRow = Selectable<Database['users']>
-type SafeUser = Omit<UserRow, 'password'>
+type SafeUser = Omit<User, 'password'>
+
+export interface UserCredentials {
+  id: string
+  username: string
+  role: User['role']
+}
 
 export function initAdmin(
   db: DB,
+  username: string,
   email: string,
   password: string
 ): ResultAsync<SafeUser, AppError> {
@@ -27,7 +32,7 @@ export function initAdmin(
       return ok(undefined)
     })
     .andThen(() =>
-      fromPromise(hash(password), () => Errors.internalError('Failed to hash password'))
+      fromPromise(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
     )
     .andThen((hashedPassword) =>
       dbInsert(
@@ -35,6 +40,7 @@ export function initAdmin(
           db
             .insertInto('users')
             .values({
+              username,
               email,
               password: hashedPassword,
               role: 'admin',
@@ -49,16 +55,18 @@ export function initAdmin(
 
 export function registerUser(
   db: DB,
+  username: string,
   email: string,
   password: string
-): ResultAsync<Payload, AppError> {
-  return fromPromise(hash(password), () => Errors.internalError('Failed to hash password'))
+): ResultAsync<UserCredentials, AppError> {
+  return fromPromise(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
     .andThen((hashedPassword) =>
       dbInsert(
         () =>
           db
             .insertInto('users')
             .values({
+              username,
               email,
               password: hashedPassword,
             })
@@ -68,28 +76,34 @@ export function registerUser(
       )
     )
     .map((user) => ({
-      sub: { id: user.id },
+      id: user.id,
+      username: user.username,
       role: user.role,
     }))
 }
 
 export function loginUser(
   db: DB,
-  email: string,
+  credential: string,
   password: string
-): ResultAsync<Payload, AppError> {
+): ResultAsync<UserCredentials, AppError> {
   return dbQueryFirst(
     () =>
       db
         .selectFrom('users')
         .selectAll()
-        .where('email', '=', email)
+        .where((eb) =>
+          eb.or([
+            eb('email', '=', credential),
+            eb('username', '=', credential),
+          ])
+        )
         .executeTakeFirst(),
     Errors.notFound('User')
   )
     .andThen((user) =>
       fromPromise(
-        verify(user.password, password),
+        bcrypt.compare(password, user.password),
         () => Errors.internalError('Password verification failed')
       ).andThen((isMatch) =>
         isMatch
@@ -98,14 +112,8 @@ export function loginUser(
       )
     )
     .map((user) => ({
-      sub: { id: user.id },
+      id: user.id,
+      username: user.username,
       role: user.role,
     }))
-}
-
-export function createToken(payload: Payload, secret: string): ResultAsync<string, AppError> {
-  return fromPromise(
-    sign(payload, secret),
-    () => Errors.internalError('Failed to create token')
-  )
 }

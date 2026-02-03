@@ -1,17 +1,18 @@
-import type { Kysely, Selectable } from 'kysely'
 import type { Database } from '@repo/schemas'
+import { User, UserUpdate } from '@repo/schemas/users'
+import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
+import { dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
-import { dbQueryMany, dbQueryFirst, dbInsert, dbUpdate, dbDelete } from 'src/shared/db-helpers'
 
 type DB = Kysely<Database>
-type UserRow = Selectable<Database['users']>
-type SafeUser = Omit<UserRow, 'password'>
+type SafeUser = Omit<User, 'password'>
 
 export type { SafeUser }
 
-const safeUserColumns = [
+const safeUserColumns: (keyof SafeUser)[] = [
   'id',
+  'username',
   'email',
   'role',
   'profile_pic',
@@ -59,6 +60,7 @@ export function getUserById(db: DB, id: string): ResultAsync<SafeUser, AppError>
 
 export function createUser(
   db: DB,
+  username: string,
   email: string,
   password: string,
   role: 'admin' | 'user'
@@ -68,6 +70,7 @@ export function createUser(
       db
         .insertInto('users')
         .values({
+          username,
           email,
           password,
           role,
@@ -78,20 +81,10 @@ export function createUser(
   )
 }
 
-export type UpdateUserData = {
-  email?: string
-  password?: string
-  phoneNumber?: string | null
-  city?: string | null
-  region?: string | null
-  zipCode?: string | null
-  role?: 'admin' | 'user'
-}
-
 export function updateUser(
   db: DB,
   id: string,
-  data: UpdateUserData
+  data: UserUpdate
 ): ResultAsync<SafeUser, AppError> {
   return dbUpdate(
     () =>

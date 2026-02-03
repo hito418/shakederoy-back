@@ -2,6 +2,9 @@
   "name": "shakederoy-back",
   "version": "1.0.0",
   "private": true,
+  "pnpm": {
+    "onlyBuiltDependencies": ["bcrypt", "esbuild"]
+  },
   "scripts": {
     "lint": "turbo lint",
     "format": "turbo format",
