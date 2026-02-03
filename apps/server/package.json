@@ -10,6 +10,7 @@
     "build": "tsdown src/main.ts",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "oxlint -c oxlintrc.json src",
+    "typecheck": "tsc --noEmit",
     "start": "node --env-file .env dist/main.js",
     "start:no-env": "node dist/main.js",
     "dev": "tsx --env-file .env --watch src/main.ts",

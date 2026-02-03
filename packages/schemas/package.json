@@ -6,6 +6,7 @@
   "scripts": {
     "lint": "oxlint -c oxlintrc.json src",
     "format": "prettier src --check",
+    "typecheck": "tsc --noEmit",
     "migration:generate": "drizzle-kit generate",
     "migration:run": "drizzle-kit migrate",
     "drizzle:studio": "drizzle-kit studio --host=0.0.0.0",
