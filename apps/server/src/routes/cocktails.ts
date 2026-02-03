@@ -3,6 +3,14 @@ import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/middleware'
+import { errorToHttpStatus } from 'src/shared/errors'
+import {
+  listCocktails,
+  getCocktailById,
+  createCocktail,
+  updateCocktail,
+  deleteCocktail,
+} from 'src/features/cocktails/service'
 
 const cocktailsRoute = new HonoVar().basePath('/cocktails')
 
@@ -13,35 +21,26 @@ cocktailsRoute
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
-
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const cocktailList = await db
-        .selectFrom('cocktails')
-        .selectAll()
-        .limit(pageSize)
-        .offset((page - 1) * pageSize)
-        .orderBy('updated_at', 'desc')
-        .execute()
+      const result = await listCocktails(db, page, pageSize)
 
-      return ctx.json(cocktailList, 200)
+      return result.match(
+        (cocktailList) => ctx.json(cocktailList, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
   .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
     const db = ctx.get('database')
     const { id } = ctx.req.param()
 
-    const cocktail = await db
-      .selectFrom('cocktails')
-      .selectAll()
-      .where('id', '=', id)
-      .executeTakeFirst()
+    const result = await getCocktailById(db, id)
 
-    if (!cocktail) {
-      return ctx.json({ message: 'Cocktail not found' }, 404)
-    }
-
-    return ctx.json(cocktail, 200)
+    return result.match(
+      (cocktail) => ctx.json(cocktail, 200),
+      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+    )
   })
   .post(
     '/create',
@@ -57,21 +56,14 @@ cocktailsRoute
     ),
     async (ctx) => {
       const db = ctx.get('database')
-      const { name, description, ingredients, instructions } =
-        ctx.req.valid('json')
+      const { name, description, ingredients, instructions } = ctx.req.valid('json')
 
-      const newCocktail = await db
-        .insertInto('cocktails')
-        .values({
-          name,
-          description,
-          ingredients,
-          instructions,
-        })
-        .returningAll()
-        .executeTakeFirst()
+      const result = await createCocktail(db, { name, description, ingredients, instructions })
 
-      return ctx.json(newCocktail, 201)
+      return result.match(
+        (newCocktail) => ctx.json(newCocktail, 201),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
   .post(
@@ -90,27 +82,14 @@ cocktailsRoute
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.param()
-      const { name, description, ingredients, instructions } =
-        ctx.req.valid('json')
+      const { name, description, ingredients, instructions } = ctx.req.valid('json')
 
-      const updatedCocktail = await db
-        .updateTable('cocktails')
-        .set({
-          ...(name ? { name } : {}),
-          ...(description ? { description } : {}),
-          ...(ingredients ? { ingredients } : {}),
-          ...(instructions ? { instructions } : {}),
-          updated_at: new Date(),
-        })
-        .where('id', '=', id)
-        .returningAll()
-        .executeTakeFirst()
+      const result = await updateCocktail(db, id, { name, description, ingredients, instructions })
 
-      if (!updatedCocktail) {
-        return ctx.json({ message: 'Cocktail not found' }, 404)
-      }
-
-      return ctx.json(updatedCocktail, 200)
+      return result.match(
+        (updatedCocktail) => ctx.json(updatedCocktail, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
   .delete(
@@ -121,17 +100,12 @@ cocktailsRoute
       const db = ctx.get('database')
       const { id } = ctx.req.param()
 
-      const deletedCocktail = await db
-        .deleteFrom('cocktails')
-        .where('id', '=', id)
-        .returningAll()
-        .executeTakeFirst()
+      const result = await deleteCocktail(db, id)
 
-      if (!deletedCocktail) {
-        return ctx.json({ message: 'Cocktail not found' }, 404)
-      }
-
-      return ctx.json(deletedCocktail, 200)
+      return result.match(
+        (deletedCocktail) => ctx.json(deletedCocktail, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
 

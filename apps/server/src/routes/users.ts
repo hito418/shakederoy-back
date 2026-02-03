@@ -6,6 +6,16 @@ import { sign } from 'hono/jwt'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/middleware'
 import { Payload } from 'src/shared/types/payload'
+import { Errors, errorToHttpStatus } from 'src/shared/errors'
+import { fromPromise } from 'src/shared/db-helpers'
+import {
+  listUsers,
+  listAllUsers,
+  getUserById,
+  createUser,
+  updateUser,
+  deleteUser,
+} from 'src/features/users/service'
 
 const usersRoute = new HonoVar().basePath('/users')
 
@@ -15,69 +25,38 @@ usersRoute.get(
   async (ctx) => {
     const db = ctx.get('database')
     const { page = 1 } = ctx.req.valid('query')
-
     const pageSize = Number(env(ctx).PAGE_SIZE)
 
-    const userList = await db
-      .selectFrom('users')
-      .select([
-        'id',
-        'email',
-        'role',
-        'profile_pic',
-        'created_at',
-        'updated_at',
-      ])
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+    const result = await listUsers(db, page, pageSize)
 
-    return ctx.json(userList, 200)
+    return result.match(
+      (userList) => ctx.json(userList, 200),
+      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+    )
   }
 )
 
 usersRoute.get('/all', async (ctx) => {
   const db = ctx.get('database')
 
-  const userList = await db
-    .selectFrom('users')
-    .select([
-      'id',
-      'email',
-      'role',
-      'profile_pic',
-      'created_at',
-      'updated_at',
-    ])
-    .orderBy('updated_at', 'desc')
-    .execute()
+  const result = await listAllUsers(db)
 
-  return ctx.json(userList, 200)
+  return result.match(
+    (userList) => ctx.json(userList, 200),
+    (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+  )
 })
 
 usersRoute.get('/self', isAuth(), async (ctx) => {
   const payload = ctx.get('userPayload')
   const db = ctx.get('database')
 
-  const user = await db
-    .selectFrom('users')
-    .select([
-      'id',
-      'email',
-      'role',
-      'profile_pic',
-      'created_at',
-      'updated_at',
-    ])
-    .where('id', '=', payload.sub.id)
-    .executeTakeFirst()
+  const result = await getUserById(db, payload.sub.id)
 
-  if (!user) {
-    return ctx.json({ message: 'User not found' }, 404)
-  }
-
-  return ctx.json(user, 200)
+  return result.match(
+    (user) => ctx.json(user, 200),
+    (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+  )
 })
 
 usersRoute.get(
@@ -92,24 +71,12 @@ usersRoute.get(
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
 
-    const user = await db
-      .selectFrom('users')
-      .select([
-        'id',
-        'email',
-        'role',
-        'profile_pic',
-        'created_at',
-        'updated_at',
-      ])
-      .where('id', '=', id)
-      .executeTakeFirst()
+    const result = await getUserById(db, id)
 
-    if (!user) {
-      return ctx.json({ message: 'User not found' }, 404)
-    }
-
-    return ctx.json(user, 200)
+    return result.match(
+      (user) => ctx.json(user, 200),
+      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+    )
   }
 )
 
@@ -128,28 +95,12 @@ usersRoute.post(
     const db = ctx.get('database')
     const { email, password, role } = ctx.req.valid('json')
 
-    const user = await db
-      .insertInto('users')
-      .values({
-        email,
-        password,
-        role,
-      })
-      .returning([
-        'id',
-        'email',
-        'role',
-        'profile_pic',
-        'created_at',
-        'updated_at',
-      ])
-      .executeTakeFirst()
+    const result = await createUser(db, email, password, role)
 
-    if (!user) {
-      return ctx.json({ message: 'Internal server error' }, 500)
-    }
-
-    return ctx.json(user, 201)
+    return result.match(
+      (user) => ctx.json(user, 201),
+      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+    )
   }
 )
 
@@ -162,7 +113,6 @@ usersRoute.put(
       email: 'string.email?',
       password: 'string > 7?',
       phoneNumber: 'string | null?',
-      // profilePic: 'File | null?',
       city: 'string | null?',
       region: 'string | null?',
       zipCode: 'string | null?',
@@ -172,44 +122,24 @@ usersRoute.put(
     const payload = ctx.get('userPayload')
     const db = ctx.get('database')
     const { ...updateDatas } = ctx.req.valid('form')
-
-    // if (profilePic && profilePic.size > Number(env(ctx).MAX_FILE_SIZE)) {
-    //   return ctx.json({ message: 'File too large' }, 400)
-    // }
-
-    // const profilePicUrl = profilePic
-    //   ? await uploadProfile(profilePic)
-    //   : undefined
-
-    const user = await db
-      .updateTable('users')
-      .set({ ...updateDatas })
-      .where('id', '=', payload.sub.id)
-      .returning([
-        'id',
-        'email',
-        'role',
-        'profile_pic',
-        'created_at',
-        'updated_at',
-      ])
-      .executeTakeFirst()
-
-    if (!user) {
-      return ctx.json({ message: 'User not found' }, 404)
-    }
-
-    const newPayload: Payload = {
-      sub: {
-        id: user.id,
-      },
-      role: user.role,
-    }
-
     const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
 
-    const token = await sign(newPayload, JWT_SECRET)
+    const result = await updateUser(db, payload.sub.id, updateDatas).andThen((user) => {
+      const newPayload: Payload = {
+        sub: { id: user.id },
+        role: user.role,
+      }
+      return fromPromise(
+        sign(newPayload, JWT_SECRET),
+        () => Errors.internalError('Failed to create token')
+      ).map((token) => ({ user, token }))
+    })
 
+    if (result.isErr()) {
+      return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
+    }
+
+    const { user, token } = result.value
     await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
 
     return ctx.json(user, 200)
@@ -231,7 +161,6 @@ usersRoute.put(
       email: 'string.email?',
       password: 'string > 7?',
       phoneNumber: 'string | null?',
-      // profilePic: 'File | null?',
       city: 'string | null?',
       region: 'string | null?',
       zipCode: 'string | null?',
@@ -242,48 +171,27 @@ usersRoute.put(
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
     const { ...updateDatas } = ctx.req.valid('form')
-    const { id: userId } = ctx.get('userPayload')
+    const { id: userId } = ctx.get('userPayload').sub
+    const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
 
-    // if (profilePic && profilePic.size > Number(env(ctx).MAX_FILE_SIZE)) {
-    //   return ctx.json({ message: 'File too large' }, 400)
-    // }
+    const result = await updateUser(db, id, updateDatas)
 
-    // const profilePicUrl = profilePic
-    //   ? await uploadProfile(profilePic)
-    //   : undefined
-
-    const user = await db
-      .updateTable('users')
-      .set({ ...updateDatas })
-      .where('id', '=', id)
-      .returning([
-        'id',
-        'email',
-        'role',
-        'profile_pic',
-        'created_at',
-        'updated_at',
-      ])
-      .executeTakeFirst()
-
-    if (!user) {
-      return ctx.json({ message: 'User not found' }, 404)
+    if (result.isErr()) {
+      return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
     }
+
+    const user = result.value
 
     if (id === userId) {
       const newPayload: Payload = {
-        sub: {
-          id: user.id,
-        },
+        sub: { id: user.id },
         role: user.role,
       }
 
-      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
-
       const token = await sign(newPayload, JWT_SECRET)
-
       await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
     }
+
     return ctx.json(user, 200)
   }
 )
@@ -296,17 +204,12 @@ usersRoute.delete(
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
 
-    const user = await db
-      .deleteFrom('users')
-      .where('id', '=', id)
-      .returning('id')
-      .executeTakeFirst()
+    const result = await deleteUser(db, id)
 
-    if (!user) {
-      return ctx.json({ message: 'User not found' }, 404)
-    }
-
-    return ctx.json(user, 200)
+    return result.match(
+      (user) => ctx.json(user, 200),
+      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+    )
   }
 )
 
@@ -314,17 +217,12 @@ usersRoute.delete('/delete/self', isAuth(), async (ctx) => {
   const payload = ctx.get('userPayload')
   const db = ctx.get('database')
 
-  const user = await db
-    .deleteFrom('users')
-    .where('id', '=', payload.sub.id)
-    .returning('id')
-    .executeTakeFirst()
+  const result = await deleteUser(db, payload.sub.id)
 
-  if (!user) {
-    return ctx.json({ message: 'User not found' }, 404)
-  }
-
-  return ctx.json(user, 200)
+  return result.match(
+    (user) => ctx.json(user, 200),
+    (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+  )
 })
 
 export default usersRoute

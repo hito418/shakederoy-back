@@ -6,6 +6,7 @@ import { initAdmin, registerUser, loginUser, createToken } from 'src/features/au
 import { env } from 'hono/adapter'
 import { type } from 'arktype'
 import { HonoVar } from 'src/shared/hono'
+import { errorToHttpStatus } from 'src/shared/errors'
 
 const authRoute = new HonoVar()
   .basePath('/auth')
@@ -24,14 +25,10 @@ const authRoute = new HonoVar()
 
       const result = await initAdmin(db, email, password)
 
-      if ('error' in result) {
-        if (result.error === 'already_initialized') {
-          return ctx.json({ message: 'Initialization already done' }, 400)
-        }
-        return ctx.json({ message: 'Failed to register' }, 500)
-      }
-
-      return ctx.json(result.user, 201)
+      return result.match(
+        (user) => ctx.json(user, 201),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
   .post(
@@ -46,18 +43,21 @@ const authRoute = new HonoVar()
     async (ctx) => {
       const { email, password } = ctx.req.valid('json')
       const db = ctx.get('database')
+      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
 
       const result = await registerUser(db, email, password)
+        .andThen((payload) =>
+          createToken(payload, JWT_SECRET).map((token) => ({ payload, token }))
+        )
 
-      if ('error' in result) {
-        return ctx.json({ message: 'Failed to register' }, 500)
+      if (result.isErr()) {
+        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
       }
 
-      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
-      const token = await createToken(result.payload, JWT_SECRET)
+      const { payload, token } = result.value
       await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
 
-      return ctx.json(result.payload, 201)
+      return ctx.json(payload, 201)
     }
   )
   .post(
@@ -92,21 +92,21 @@ const authRoute = new HonoVar()
     async (ctx) => {
       const { credential, password } = ctx.req.valid('json')
       const db = ctx.get('database')
+      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
 
       const result = await loginUser(db, credential, password)
+        .andThen((payload) =>
+          createToken(payload, JWT_SECRET).map((token) => ({ payload, token }))
+        )
 
-      if ('error' in result) {
-        if (result.error === 'not_found') {
-          return ctx.json({ message: 'User not found' }, 404)
-        }
-        return ctx.json({ message: 'Wrong password' }, 401)
+      if (result.isErr()) {
+        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
       }
 
-      const { COOKIE_SECRET, JWT_SECRET } = env(ctx)
-      const token = await createToken(result.payload, JWT_SECRET)
+      const { payload, token } = result.value
       await setSignedCookie(ctx, 'access_token', token, COOKIE_SECRET)
 
-      return ctx.json(result.payload, 200)
+      return ctx.json(payload, 200)
     }
   )
   .get('/logout', isAuth(), async (ctx) => {
