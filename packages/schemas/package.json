@@ -10,7 +10,7 @@
     "migration:generate": "drizzle-kit generate",
     "migration:run": "drizzle-kit migrate",
     "drizzle:studio": "drizzle-kit studio --host=0.0.0.0",
-    "build": "tsdown src/index.ts src/schemas/*.ts",
+    "build": "tsdown src/index.ts src/entities/*.ts",
     "dev": "pnpm drizzle:studio"
   },
   "dependencies": {
@@ -34,9 +34,9 @@
       "import": "./dist/index.d.mts"
     },
     "./*": {
-      "source": "./src/schemas/*.mts",
-      "types": "./dist/schemas/*.d.mts",
-      "import": "./dist/schemas/*.d.mts"
+      "source": "./src/entities/*.mts",
+      "types": "./dist/entities/*.d.mts",
+      "import": "./dist/entities/*.d.mts"
     }
   }
 }

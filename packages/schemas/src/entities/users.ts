@@ -1,9 +1,8 @@
 import type { Kyselify } from 'drizzle-orm/kysely'
-import { pgEnum, pgTable, text, uuid } from 'drizzle-orm/pg-core'
+import { boolean, pgEnum, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 import type { Insertable, Selectable, Updateable } from 'kysely'
-import { timestamps } from './utils/timestamps'
-
-export const userRolesEnum = pgEnum('user_roles', ['admin', 'user'])
+import { deletedAt, timestamps } from '../shared/timestamps'
+import { userRolesEnum } from '../shared/enums'
 
 export const users = pgTable('users', {
   id: uuid('id').defaultRandom().primaryKey(),
@@ -12,7 +11,9 @@ export const users = pgTable('users', {
   password: text('password').notNull(),
   role: userRolesEnum('role').notNull().default('user'),
   profilePic: text('profile_pic'),
+  isBarOwner: boolean('is_bar_owner').notNull().default(false),
   ...timestamps,
+  deletedAt,
 })
 
 export type User = Selectable<Kyselify<typeof users>>
