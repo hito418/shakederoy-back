@@ -11,6 +11,9 @@ import {
   updateCocktail,
   deleteCocktail,
 } from 'src/features/cocktails/service'
+import stylesRoute from './styles'
+import extrasRoute from './extras'
+import analyticsRoute from './analytics'
 
 const cocktailsRoute = new HonoVar().basePath('/cocktails')
 
@@ -33,7 +36,7 @@ cocktailsRoute
   )
   .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
     const db = ctx.get('database')
-    const { id } = ctx.req.param()
+    const { id } = ctx.req.valid('param')
 
     const result = await getCocktailById(db, id)
 
@@ -49,16 +52,29 @@ cocktailsRoute
       'json',
       type({
         name: 'string > 3',
-        description: 'string > 5',
-        ingredients: 'string',
-        instructions: 'string',
+        slug: 'string >= 1',
+        'description?': 'string',
+        'intensity?': 'number',
+        'difficulty?': 'number',
+        'prepTime?': 'number',
+        'glassId?': 'string',
       })
     ),
     async (ctx) => {
       const db = ctx.get('database')
-      const { name, description, ingredients, instructions } = ctx.req.valid('json')
+      const payload = ctx.get('userPayload')
+      const { name, slug, description, intensity, difficulty, prepTime, glassId } = ctx.req.valid('json')
 
-      const result = await createCocktail(db, { name, description, ingredients, instructions })
+      const result = await createCocktail(db, {
+        name,
+        slug,
+        description,
+        intensity,
+        difficulty,
+        prep_time: prepTime,
+        glass_id: glassId,
+        created_by_id: payload.sub.id,
+      })
 
       return result.match(
         (newCocktail) => ctx.json(newCocktail, 201),
@@ -66,25 +82,36 @@ cocktailsRoute
       )
     }
   )
-  .post(
+  .put(
     '/:id',
     isAuth(),
     sValidator('param', type({ id: 'string' })),
     sValidator(
       'json',
       type({
-        name: 'string > 3?',
-        description: 'string > 5?',
-        ingredients: 'string?',
-        instructions: 'string?',
+        'name?': 'string > 3',
+        'slug?': 'string >= 1',
+        'description?': 'string',
+        'intensity?': 'number',
+        'difficulty?': 'number',
+        'prepTime?': 'number',
+        'glassId?': 'string',
       })
     ),
     async (ctx) => {
       const db = ctx.get('database')
-      const { id } = ctx.req.param()
-      const { name, description, ingredients, instructions } = ctx.req.valid('json')
+      const { id } = ctx.req.valid('param')
+      const { name, slug, description, intensity, difficulty, prepTime, glassId } = ctx.req.valid('json')
 
-      const result = await updateCocktail(db, id, { name, description, ingredients, instructions })
+      const result = await updateCocktail(db, id, {
+        name,
+        slug,
+        description,
+        intensity,
+        difficulty,
+        prep_time: prepTime,
+        glass_id: glassId,
+      })
 
       return result.match(
         (updatedCocktail) => ctx.json(updatedCocktail, 200),
@@ -98,7 +125,7 @@ cocktailsRoute
     sValidator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
-      const { id } = ctx.req.param()
+      const { id } = ctx.req.valid('param')
 
       const result = await deleteCocktail(db, id)
 
@@ -108,5 +135,8 @@ cocktailsRoute
       )
     }
   )
+  .route('/styles', stylesRoute)
+  .route('/', extrasRoute)
+  .route('/', analyticsRoute)
 
 export default cocktailsRoute

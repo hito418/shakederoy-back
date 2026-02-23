@@ -1,5 +1,5 @@
 import type { Database } from '@repo/schemas'
-import { Cocktail, CocktailInsert, CocktailUpdate } from '@repo/schemas/cocktails'
+import type { CocktailStyle, CocktailStyleInsert, CocktailStyleUpdate } from '@repo/schemas/cocktail-styles'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
@@ -7,14 +7,14 @@ import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
-export function listCocktails(
+export function listCocktailStyles(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<Cocktail[], AppError> {
+): ResultAsync<CocktailStyle[], AppError> {
   return dbQueryMany(() =>
     db
-      .selectFrom('cocktails')
+      .selectFrom('cocktail_styles')
       .selectAll()
       .limit(pageSize)
       .offset((page - 1) * pageSize)
@@ -23,58 +23,61 @@ export function listCocktails(
   )
 }
 
-export function getCocktailById(db: DB, id: string): ResultAsync<Cocktail, AppError> {
+export function getCocktailStyleById(db: DB, id: string): ResultAsync<CocktailStyle, AppError> {
   return dbQueryFirst(
     () =>
       db
-        .selectFrom('cocktails')
+        .selectFrom('cocktail_styles')
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst(),
-    Errors.notFound('Cocktail')
+    Errors.notFound('CocktailStyle')
   )
 }
 
-export function createCocktail(
+export function createCocktailStyle(
   db: DB,
-  data: CocktailInsert
-): ResultAsync<Cocktail, AppError> {
+  data: CocktailStyleInsert
+): ResultAsync<CocktailStyle, AppError> {
   return dbInsert(
     () =>
       db
-        .insertInto('cocktails')
-        .values(data)
+        .insertInto('cocktail_styles')
+        .values({
+          name: data.name,
+          description: data.description,
+        })
         .returningAll()
         .executeTakeFirst(),
-    'Failed to create cocktail'
+    'Failed to create cocktail style'
   )
 }
 
-export function updateCocktail(
+export function updateCocktailStyle(
   db: DB,
   id: string,
-  data: CocktailUpdate
-): ResultAsync<Cocktail, AppError> {
+  data: CocktailStyleUpdate
+): ResultAsync<CocktailStyle, AppError> {
   return dbUpdate(
     () =>
       db
-        .updateTable('cocktails')
+        .updateTable('cocktail_styles')
         .set(cleanUpdate(data))
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Cocktail')
+    Errors.notFound('CocktailStyle')
   )
 }
 
-export function deleteCocktail(db: DB, id: string): ResultAsync<Cocktail, AppError> {
+export function deleteCocktailStyle(db: DB, id: string): ResultAsync<CocktailStyle, AppError> {
   return dbDelete(
     () =>
       db
-        .deleteFrom('cocktails')
+        .deleteFrom('cocktail_styles')
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Cocktail')
+    Errors.notFound('CocktailStyle')
   )
 }
