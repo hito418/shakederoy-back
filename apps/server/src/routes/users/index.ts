@@ -8,12 +8,12 @@ import { deleteSession } from 'src/features/auth/session-service'
 import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listUsers,
-  listAllUsers,
   getUserById,
   createUser,
   updateUser,
   deleteUser,
 } from 'src/features/users/service'
+import favoritesRoute from './favorites'
 
 const usersRoute = new HonoVar().basePath('/users')
 
@@ -33,17 +33,6 @@ usersRoute.get(
     )
   }
 )
-
-usersRoute.get('/all', async (ctx) => {
-  const db = ctx.get('database')
-
-  const result = await listAllUsers(db)
-
-  return result.match(
-    (userList) => ctx.json(userList, 200),
-    (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-  )
-})
 
 usersRoute.get('/self', isAuth(), async (ctx) => {
   const payload = ctx.get('userPayload')
@@ -171,7 +160,7 @@ usersRoute.put(
 usersRoute.delete(
   '/delete/:id',
   sValidator('param', type({ id: 'string' })),
-  isAuth(),
+  isAuth('admin'),
   async (ctx) => {
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
@@ -205,5 +194,7 @@ usersRoute.delete('/delete/self', isAuth(), async (ctx) => {
     (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
   )
 })
+
+usersRoute.route('/', favoritesRoute)
 
 export default usersRoute

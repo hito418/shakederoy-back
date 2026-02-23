@@ -1,8 +1,9 @@
+import bcrypt from 'bcrypt'
 import type { Database } from '@repo/schemas'
 import { User, UserUpdate } from '@repo/schemas/users'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate, fromPromise } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -36,16 +37,6 @@ export function listUsers(
   )
 }
 
-export function listAllUsers(db: DB): ResultAsync<SafeUser[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('users')
-      .select([...safeUserColumns])
-      .orderBy('updated_at', 'desc')
-      .execute()
-  )
-}
-
 export function getUserById(db: DB, id: string): ResultAsync<SafeUser, AppError> {
   return dbQueryFirst(
     () =>
@@ -65,20 +56,23 @@ export function createUser(
   password: string,
   role: 'admin' | 'user'
 ): ResultAsync<SafeUser, AppError> {
-  return dbInsert(
-    () =>
-      db
-        .insertInto('users')
-        .values({
-          username,
-          email,
-          password,
-          role,
-        })
-        .returning([...safeUserColumns])
-        .executeTakeFirst(),
-    'Failed to create user'
-  )
+  return fromPromise(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
+    .andThen((hashedPassword) =>
+      dbInsert(
+        () =>
+          db
+            .insertInto('users')
+            .values({
+              username,
+              email,
+              password: hashedPassword,
+              role,
+            })
+            .returning([...safeUserColumns])
+            .executeTakeFirst(),
+        'Failed to create user'
+      )
+    )
 }
 
 export function updateUser(
@@ -86,16 +80,26 @@ export function updateUser(
   id: string,
   data: UserUpdate
 ): ResultAsync<SafeUser, AppError> {
-  return dbUpdate(
-    () =>
-      db
-        .updateTable('users')
-        .set({ ...data })
-        .where('id', '=', id)
-        .returning([...safeUserColumns])
-        .executeTakeFirst(),
-    Errors.notFound('User')
-  )
+  const hashIfNeeded = data.password
+    ? fromPromise(bcrypt.hash(data.password, 10), () => Errors.internalError('Failed to hash password'))
+    : ResultAsync.fromSafePromise<string | undefined, AppError>(Promise.resolve(undefined))
+
+  return hashIfNeeded.andThen((hashedPassword) => {
+    const updateData = cleanUpdate({
+      ...data,
+      ...(hashedPassword ? { password: hashedPassword } : {}),
+    })
+    return dbUpdate(
+      () =>
+        db
+          .updateTable('users')
+          .set(updateData)
+          .where('id', '=', id)
+          .returning([...safeUserColumns])
+          .executeTakeFirst(),
+      Errors.notFound('User')
+    )
+  })
 }
 
 export function deleteUser(db: DB, id: string): ResultAsync<{ id: string }, AppError> {
