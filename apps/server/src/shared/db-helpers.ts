@@ -1,5 +1,21 @@
+import type { Database } from '@repo/schemas'
+import type { Kysely } from 'kysely'
 import { err, ok, ResultAsync } from 'neverthrow'
 import { Errors, type AppError } from './errors'
+
+export function cleanUpdate<T extends Record<string, unknown>>(data: T): Partial<T> & { updated_at: Date } {
+  const cleaned = Object.fromEntries(
+    Object.entries(data).filter(([, v]) => v !== undefined)
+  )
+  return { ...cleaned, updated_at: new Date() } as Partial<T> & { updated_at: Date }
+}
+
+export function withTransaction<T>(
+  db: Kysely<Database>,
+  fn: (trx: Kysely<Database>) => Promise<T>
+): ResultAsync<T, AppError> {
+  return fromPromise(db.transaction().execute(fn), () => Errors.databaseError())
+}
 
 export function fromPromise<T>(
   promise: Promise<T>,
