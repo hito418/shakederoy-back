@@ -8,6 +8,13 @@
       "when": 1768209957733,
       "tag": "0000_futuristic_hobgoblin",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771923310632,
+      "tag": "0001_many_proudstar",
+      "breakpoints": true
     }
   ]
 }
