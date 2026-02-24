@@ -10,6 +10,7 @@ services:
       - ./nginx.conf:/etc/nginx/templates/default.conf.template
   server:
     image: martni/shakederoy:${SERVER_IMAGE_TAG}
+    build: .
     environment:
       PG_HOST: ${PG_HOST}
       PG_PORT: ${PG_PORT}
