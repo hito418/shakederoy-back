@@ -8,6 +8,13 @@
       "when": 1771944132890,
       "tag": "0000_dapper_psynapse",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1771947624823,
+      "tag": "0001_powerful_stingray",
+      "breakpoints": true
     }
   ]
 }
