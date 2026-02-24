@@ -15,6 +15,13 @@
       "when": 1770281203336,
       "tag": "0001_classy_polaris",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771943797164,
+      "tag": "0002_misty_giant_man",
+      "breakpoints": true
     }
   ]
 }

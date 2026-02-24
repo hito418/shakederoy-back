@@ -1,3 +1,33 @@
+DO $$ BEGIN
+ CREATE TYPE "public"."bar_style" AS ENUM('classic', 'speakeasy', 'tiki', 'rooftop', 'dive', 'wine_bar', 'cocktail_lounge', 'sports_bar', 'brewpub', 'other');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."cocktail_status" AS ENUM('draft', 'pending', 'approved', 'rejected');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."ingredient_category" AS ENUM('spirit', 'liqueur', 'wine', 'beer', 'mixer', 'juice', 'syrup', 'bitter', 'garnish', 'dairy', 'other');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."party_mode" AS ENUM('voting', 'host_picks', 'random');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."vote_type" AS ENUM('upvote', 'downvote');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "alcohol_types" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
