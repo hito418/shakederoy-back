@@ -10,7 +10,7 @@
     "migration:generate": "drizzle-kit generate",
     "migration:run": "drizzle-kit migrate",
     "drizzle:studio": "drizzle-kit studio --host=0.0.0.0",
-    "build": "tsdown src/index.ts src/entities/*.ts",
+    "build": "tsc --noEmit",
     "dev": "pnpm drizzle:studio"
   },
   "dependencies": {
@@ -27,16 +27,17 @@
   "files": [
     "dist"
   ],
+  "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "source": "./src/index.mts",
-      "types": "./dist/index.d.mts",
-      "import": "./dist/index.d.mts"
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
     },
     "./*": {
-      "source": "./src/entities/*.mts",
-      "types": "./dist/entities/*.d.mts",
-      "import": "./dist/entities/*.d.mts"
+      "types": "./dist/entities/*.d.ts",
+      "import": "./dist/entities/*.js",
+      "default": "./dist/entities/*.js"
     }
   }
 }

@@ -10,6 +10,7 @@ const envSchema = type({
   CORS_ORIGIN: 'string',
   APP_PORT: 'string.numeric',
   PAGE_SIZE: type.string.default('15'),
+  UPLOAD_DIR: type.string.default('uploads'),
   NODE_ENV: '"DEV" | "STAGING" | "PROD"',
 })
 

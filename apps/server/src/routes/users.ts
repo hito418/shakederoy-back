@@ -112,10 +112,7 @@ usersRoute.put(
       username: 'string >= 3?',
       email: 'string.email?',
       password: 'string > 7?',
-      phoneNumber: 'string | null?',
-      city: 'string | null?',
-      region: 'string | null?',
-      zipCode: 'string | null?',
+      profile_pic: 'string | null?',
     })
   ),
   async (ctx) => {
@@ -147,10 +144,7 @@ usersRoute.put(
       username: 'string >= 3?',
       email: 'string.email?',
       password: 'string > 7?',
-      phoneNumber: 'string | null?',
-      city: 'string | null?',
-      region: 'string | null?',
-      zipCode: 'string | null?',
+      profile_pic: 'string | null?',
       role: '"admin" | "user"?',
     })
   ),
@@ -171,7 +165,7 @@ usersRoute.put(
 usersRoute.delete(
   '/delete/:id',
   sValidator('param', type({ id: 'string' })),
-  isAuth(),
+  isAuth('admin'),
   async (ctx) => {
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')

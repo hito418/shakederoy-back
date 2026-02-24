@@ -10,13 +10,28 @@ import { errorToHttpStatus } from 'src/shared/errors'
 
 const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV !== 'DEV',
+  secure: process.env.NODE_ENV === 'PROD',
   sameSite: 'Lax' as const,
   path: '/',
 }
 
 const authRoute = new HonoVar()
   .basePath('/auth')
+
+const logoutHandler = async (ctx: any) => {
+  const { COOKIE_SECRET } = env(ctx)
+  const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
+
+  if (sessionId) {
+    const db = ctx.get('database')
+    await deleteSession(db, sessionId)
+  }
+
+  deleteCookie(ctx, 'session_id')
+  return ctx.text('Logged out', 200)
+}
+
+authRoute
   .post(
     '/init',
     sValidator(
@@ -117,17 +132,7 @@ const authRoute = new HonoVar()
       return ctx.json(payload, 200)
     }
   )
-  .get('/logout', isAuth(), async (ctx) => {
-    const { COOKIE_SECRET } = env(ctx)
-    const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
-
-    if (sessionId) {
-      const db = ctx.get('database')
-      await deleteSession(db, sessionId)
-    }
-
-    deleteCookie(ctx, 'session_id')
-    return ctx.text('Logged out', 200)
-  })
+  .get('/logout', isAuth(), logoutHandler)
+  .post('/logout', isAuth(), logoutHandler)
 
 export default authRoute

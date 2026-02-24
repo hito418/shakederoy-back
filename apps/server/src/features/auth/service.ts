@@ -44,7 +44,7 @@ export function initAdmin(
               email,
               password: hashedPassword,
               role: 'admin',
-            })
+            } as any)
             .returningAll()
             .executeTakeFirst(),
         'Failed to create admin user'
@@ -69,7 +69,7 @@ export function registerUser(
               username,
               email,
               password: hashedPassword,
-            })
+            } as any)
             .returningAll()
             .executeTakeFirst(),
         'Failed to register user'

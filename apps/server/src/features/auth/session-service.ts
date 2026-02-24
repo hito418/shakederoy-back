@@ -37,7 +37,7 @@ export function createSession(
           id: sessionId,
           user_id: userId,
           expires_at: expiresAt,
-        })
+        } as any)
         .returning(['id', 'user_id', 'expires_at'])
         .executeTakeFirst(),
     'Failed to create session'

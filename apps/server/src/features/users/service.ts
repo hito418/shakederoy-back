@@ -2,15 +2,16 @@ import type { Database } from '@repo/schemas'
 import { User, UserUpdate } from '@repo/schemas/users'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
+import bcrypt from 'bcrypt'
 import { dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
-type SafeUser = Omit<User, 'password'>
+type SafeUser = Pick<User, 'id' | 'username' | 'email' | 'role' | 'profile_pic' | 'created_at' | 'updated_at'>
 
 export type { SafeUser }
 
-const safeUserColumns: (keyof SafeUser)[] = [
+const safeUserColumns = [
   'id',
   'username',
   'email',
@@ -65,19 +66,24 @@ export function createUser(
   password: string,
   role: 'admin' | 'user'
 ): ResultAsync<SafeUser, AppError> {
-  return dbInsert(
-    () =>
-      db
-        .insertInto('users')
-        .values({
-          username,
-          email,
-          password,
-          role,
-        })
-        .returning([...safeUserColumns])
-        .executeTakeFirst(),
-    'Failed to create user'
+  return ResultAsync.fromPromise(
+    bcrypt.hash(password, 10),
+    () => Errors.internalError('Failed to hash password')
+  ).andThen((hashedPassword) =>
+    dbInsert(
+      () =>
+        db
+          .insertInto('users')
+          .values({
+            username,
+            email,
+            password: hashedPassword,
+            role,
+          } as any)
+          .returning([...safeUserColumns])
+          .executeTakeFirst(),
+      'Failed to create user'
+    )
   )
 }
 
@@ -86,15 +92,29 @@ export function updateUser(
   id: string,
   data: UserUpdate
 ): ResultAsync<SafeUser, AppError> {
-  return dbUpdate(
-    () =>
-      db
-        .updateTable('users')
-        .set({ ...data })
-        .where('id', '=', id)
-        .returning([...safeUserColumns])
-        .executeTakeFirst(),
-    Errors.notFound('User')
+  const hashResult = data.password
+    ? ResultAsync.fromPromise(
+        bcrypt.hash(data.password, 10),
+        () => Errors.internalError('Failed to hash password')
+      )
+    : ResultAsync.fromPromise(Promise.resolve<string | undefined>(undefined), () =>
+        Errors.internalError('Unexpected hashing error')
+      )
+
+  return hashResult.andThen((hashedPassword) =>
+    dbUpdate(
+      () =>
+        db
+          .updateTable('users')
+          .set({
+            ...data,
+            ...(hashedPassword ? { password: hashedPassword } : {}),
+          })
+          .where('id', '=', id)
+          .returning([...safeUserColumns])
+          .executeTakeFirst(),
+      Errors.notFound('User')
+    )
   )
 }
 
