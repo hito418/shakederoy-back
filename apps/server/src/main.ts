@@ -7,7 +7,6 @@ import './lib/env'
 import { HonoVar } from './lib/hono'
 import authRoute from './routes/auth'
 import cocktailsRoute from './routes/cocktails'
-import favoritesRoute from './routes/favorites'
 import usersRoute from './routes/users'
 import { Context } from 'hono'
 // import seedDb from './lib/seed'
@@ -32,7 +31,6 @@ const app = new HonoVar()
   .route('/', authRoute)
   .route('/', usersRoute)
   .route('/', cocktailsRoute)
-  .route('/', favoritesRoute)
   .get('/healthcheck', (ctx) => {
     return ctx.json({ status: 'ok' }, 200)
   })

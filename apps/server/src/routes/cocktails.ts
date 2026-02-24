@@ -1,4 +1,5 @@
 import { sValidator } from '@hono/standard-validator'
+import { sql } from 'kysely'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { HonoVar } from 'src/lib/hono'
@@ -16,15 +17,75 @@ cocktailsRoute
 
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const cocktailList = await db
-        .selectFrom('cocktails')
-        .selectAll()
-        .limit(pageSize)
-        .offset((page - 1) * pageSize)
-        .orderBy('updated_at', 'desc')
-        .execute()
+      const [cocktailList, countResult] = await Promise.all([
+        db
+          .selectFrom('cocktails')
+          .selectAll()
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
+          .orderBy('updated_at', 'desc')
+          .execute(),
+        db
+          .selectFrom('cocktails')
+          .select(sql<number>`count(*)`.as('total'))
+          .executeTakeFirstOrThrow(),
+      ])
 
-      return ctx.json(cocktailList, 200)
+      const total = Number(countResult.total)
+
+      return ctx.json(
+        {
+          data: cocktailList,
+          page,
+          pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+        },
+        200
+      )
+    }
+  )
+  .get(
+    '/favorites',
+    isAuth(),
+    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { sub } = ctx.get('userPayload')
+      const { page = 1 } = ctx.req.valid('query')
+
+      const pageSize = Number(env(ctx).PAGE_SIZE)
+
+      const [favoritesList, countResult] = await Promise.all([
+        db
+          .selectFrom('favorites')
+          .innerJoin('cocktails', 'cocktails.id', 'favorites.cocktail_id')
+          .selectAll('cocktails')
+          .select('favorites.created_at as favorited_at')
+          .where('favorites.user_id', '=', sub.id)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
+          .orderBy('favorites.created_at', 'desc')
+          .execute(),
+        db
+          .selectFrom('favorites')
+          .select(sql<number>`count(*)`.as('total'))
+          .where('favorites.user_id', '=', sub.id)
+          .executeTakeFirstOrThrow(),
+      ])
+
+      const total = Number(countResult.total)
+
+      return ctx.json(
+        {
+          data: favoritesList,
+          page,
+          pageSize,
+          total,
+          totalPages: Math.ceil(total / pageSize),
+        },
+        200
+      )
     }
   )
   .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
@@ -132,6 +193,58 @@ cocktailsRoute
       }
 
       return ctx.json(deletedCocktail, 200)
+    }
+  )
+  .post(
+    '/:cocktailId/favorite',
+    isAuth(),
+    sValidator('param', type({ cocktailId: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { sub } = ctx.get('userPayload')
+      const { cocktailId } = ctx.req.valid('param')
+
+      const existing = await db
+        .selectFrom('favorites')
+        .selectAll()
+        .where('user_id', '=', sub.id)
+        .where('cocktail_id', '=', cocktailId)
+        .executeTakeFirst()
+
+      if (existing) {
+        return ctx.json({ message: 'Already in favorites' }, 409)
+      }
+
+      const favorite = await db
+        .insertInto('favorites')
+        .values({ user_id: sub.id, cocktail_id: cocktailId })
+        .returningAll()
+        .executeTakeFirst()
+
+      return ctx.json(favorite, 201)
+    }
+  )
+  .delete(
+    '/:cocktailId/favorite',
+    isAuth(),
+    sValidator('param', type({ cocktailId: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { sub } = ctx.get('userPayload')
+      const { cocktailId } = ctx.req.valid('param')
+
+      const deleted = await db
+        .deleteFrom('favorites')
+        .where('user_id', '=', sub.id)
+        .where('cocktail_id', '=', cocktailId)
+        .returningAll()
+        .executeTakeFirst()
+
+      if (!deleted) {
+        return ctx.json({ message: 'Favorite not found' }, 404)
+      }
+
+      return ctx.json(deleted, 200)
     }
   )
 
