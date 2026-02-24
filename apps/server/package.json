@@ -11,10 +11,10 @@
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "lint": "oxlint -c oxlintrc.json src",
     "typecheck": "tsc --noEmit",
-    "start": "node --env-file .env dist/main.js",
+    "start": "node dist/main.js",
     "start:no-env": "node dist/main.js",
-    "dev": "tsx --env-file .env --watch src/main.ts",
-    "seed": "tsx --env-file .env src/scripts/seed.ts"
+    "dev": "tsx --watch src/main.ts",
+    "seed": "tsx src/scripts/seed/index.ts"
   },
   "dependencies": {
     "@hono/node-server": "^1.10.0",
