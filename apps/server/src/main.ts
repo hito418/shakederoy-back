@@ -14,6 +14,7 @@ import ingredientsRoute from './routes/ingredients'
 import barsRoute from './routes/bars'
 import collectionsRoute from './routes/collections'
 import partiesRoute from './routes/parties'
+import { openAPIRouteHandler } from 'hono-openapi'
 // import seedDb from './lib/seed'
 
 if (process?.env?.NODE_ENV === 'DEV') {
@@ -45,6 +46,19 @@ const app = new HonoVar()
   .get('/healthcheck', (ctx) => {
     return ctx.json({ status: 'ok' }, 200)
   })
+  
+app.get(
+  "/openapi.json",
+  openAPIRouteHandler(app, {
+    documentation: {
+      info: {
+        title: "ShakeDeRoy",
+        version: "1.0.0",
+        description: "shakederoy API",
+      },
+    },
+  }),
+);
 
 if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
   showRoutes(app)
