@@ -7,9 +7,23 @@ services:
       context: .
       dockerfile: Dockerfile.dev
     user: 1000:1000
+    environment:
+      - APP_PORT=3000
+      - PG_HOST=postgres
+      - PG_PORT=5432
+      - PG_DB=postgres
+      - PG_USER=postgres
+      - PG_PASSWORD=postgres
+      - COOKIE_SECRET=COOKIE_SECRET
+      - JWT_SECRET=JWT_SECRET
+      - CORS_ORIGIN=localhost
+      - NODE_ENV=STAGING
+      - APP_PORT=3000
+      - PAGE_SIZE=15
+      - SERVER_IMAGE_TAG=staging
     ports:
       - 3000:3000 # hono
       - 4983:4983 # drizzle-studio
-    command: pnpm turbo -F @repo/server -F @repo/schemas dev
+    command: pnpm turbo -F @repo/server -F @repo/schemas dev --env-mode=loose
     volumes:
       - ./:/app
