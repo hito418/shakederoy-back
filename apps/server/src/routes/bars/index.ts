@@ -301,17 +301,24 @@ barsRoute.delete(
 // --- Bar Likes ---
 
 barsRoute
-  .get('/:barId/likes', sValidator('param', type({ barId: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { barId } = ctx.req.valid('param')
+  .get(
+    '/:barId/likes',
+    sValidator('param', type({ barId: 'string' })),
+    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { barId } = ctx.req.valid('param')
+      const { page = 1 } = ctx.req.valid('query')
+      const pageSize = Number(env(ctx).PAGE_SIZE)
 
-    const result = await listBarLikes(db, barId)
+      const result = await listBarLikes(db, barId, page, pageSize)
 
-    return result.match(
-      (likes) => ctx.json(likes, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (likes) => ctx.json(likes, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post('/:barId/likes/toggle', isAuth(), sValidator('param', type({ barId: 'string' })), async (ctx) => {
     const db = ctx.get('database')
     const { barId } = ctx.req.valid('param')

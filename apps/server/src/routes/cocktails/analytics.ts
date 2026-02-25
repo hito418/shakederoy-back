@@ -22,17 +22,24 @@ const analyticsRoute = new HonoVar()
 // --- Votes ---
 
 analyticsRoute
-  .get('/:cocktailId/votes', sValidator('param', type({ cocktailId: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { cocktailId } = ctx.req.valid('param')
+  .get(
+    '/:cocktailId/votes',
+    sValidator('param', type({ cocktailId: 'string' })),
+    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { cocktailId } = ctx.req.valid('param')
+      const { page = 1 } = ctx.req.valid('query')
+      const pageSize = Number(env(ctx).PAGE_SIZE)
 
-    const result = await listCocktailVotes(db, cocktailId)
+      const result = await listCocktailVotes(db, cocktailId, page, pageSize)
 
-    return result.match(
-      (votes) => ctx.json(votes, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (votes) => ctx.json(votes, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/:cocktailId/votes',
     isAuth(),

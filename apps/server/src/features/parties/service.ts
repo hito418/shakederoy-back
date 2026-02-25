@@ -5,7 +5,7 @@ import type { PartyParticipantStyle, PartyParticipantStyleInsert } from '@repo/s
 import type { PartyCocktailSelection, PartyCocktailSelectionInsert, PartyCocktailSelectionUpdate } from '@repo/schemas/party-cocktail-selections'
 import type { Kysely } from 'kysely'
 import type { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -16,16 +16,26 @@ export function listPartySessions(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<PartySession[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('party_sessions')
-      .selectAll()
-      .where('is_active', '=', true)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('created_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<PartySession>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('party_sessions')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('is_active', '=', true)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('party_sessions')
+        .selectAll()
+        .where('is_active', '=', true)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('created_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

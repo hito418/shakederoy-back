@@ -4,7 +4,7 @@ import type { CocktailView } from '@repo/schemas/cocktail-views'
 import type { CocktailOfMonth } from '@repo/schemas/cocktail-of-month'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate, withTransaction } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbQueryPaginated, dbUpdate, withTransaction, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -13,14 +13,28 @@ type DB = Kysely<Database>
 
 export function listCocktailVotes(
   db: DB,
-  cocktailId: string
-): ResultAsync<CocktailVote[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('cocktail_votes')
-      .selectAll()
-      .where('cocktail_id', '=', cocktailId)
-      .execute()
+  cocktailId: string,
+  page: number,
+  pageSize: number
+): ResultAsync<PaginatedResult<CocktailVote>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('cocktail_votes')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('cocktail_id', '=', cocktailId)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('cocktail_votes')
+        .selectAll()
+        .where('cocktail_id', '=', cocktailId)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .execute(),
+    page,
+    pageSize
   )
 }
 
@@ -93,16 +107,26 @@ export function listCocktailViews(
   cocktailId: string,
   page: number,
   pageSize: number
-): ResultAsync<CocktailView[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('cocktail_views')
-      .selectAll()
-      .where('cocktail_id', '=', cocktailId)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('created_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<CocktailView>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('cocktail_views')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('cocktail_id', '=', cocktailId)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('cocktail_views')
+        .selectAll()
+        .where('cocktail_id', '=', cocktailId)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('created_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

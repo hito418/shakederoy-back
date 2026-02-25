@@ -3,7 +3,7 @@ import type { Database } from '@repo/schemas'
 import { User, UserUpdate } from '@repo/schemas/users'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate, fromPromise } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, fromPromise, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -25,15 +25,20 @@ export function listUsers(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<SafeUser[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('users')
-      .select([...safeUserColumns])
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<SafeUser>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) => trx.selectFrom('users').select((eb) => eb.fn.countAll().as('count')).execute(),
+    (trx) =>
+      trx
+        .selectFrom('users')
+        .select([...safeUserColumns])
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('updated_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

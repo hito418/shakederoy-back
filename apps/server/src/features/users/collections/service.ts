@@ -8,7 +8,7 @@ import type {
 } from '@repo/schemas/collections'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate, withTransaction } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, withTransaction, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -20,16 +20,26 @@ export function listCollections(
   userId: string,
   page: number,
   pageSize: number
-): ResultAsync<Collection[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('collections')
-      .selectAll()
-      .where('user_id', '=', userId)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<Collection>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('collections')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('user_id', '=', userId)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('collections')
+        .selectAll()
+        .where('user_id', '=', userId)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('updated_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 
@@ -37,16 +47,26 @@ export function listPublicCollections(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<Collection[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('collections')
-      .selectAll()
-      .where('is_public', '=', true)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<Collection>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('collections')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('is_public', '=', true)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('collections')
+        .selectAll()
+        .where('is_public', '=', true)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('updated_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 
@@ -129,8 +149,10 @@ export function deleteCollection(db: DB, id: string, userId: string): ResultAsyn
 export function listCollectionCocktails(
   db: DB,
   collectionId: string,
+  page: number,
+  pageSize: number,
   userId?: string
-): ResultAsync<CollectionCocktail[], AppError> {
+): ResultAsync<PaginatedResult<CollectionCocktail>, AppError> {
   return dbQueryFirst(
     () =>
       db
@@ -146,12 +168,24 @@ export function listCollectionCocktails(
         .executeTakeFirst(),
     Errors.notFound('Collection')
   ).andThen(() =>
-    dbQueryMany(() =>
-      db
-        .selectFrom('collection_cocktails')
-        .selectAll()
-        .where('collection_id', '=', collectionId)
-        .execute()
+    dbQueryPaginated(
+      db,
+      (trx) =>
+        trx
+          .selectFrom('collection_cocktails')
+          .select((eb) => eb.fn.countAll().as('count'))
+          .where('collection_id', '=', collectionId)
+          .execute(),
+      (trx) =>
+        trx
+          .selectFrom('collection_cocktails')
+          .selectAll()
+          .where('collection_id', '=', collectionId)
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
+          .execute(),
+      page,
+      pageSize
     )
   )
 }

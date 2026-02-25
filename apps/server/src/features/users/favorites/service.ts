@@ -2,7 +2,7 @@ import type { Database } from '@repo/schemas'
 import type { UserFavorite } from '@repo/schemas/favorites'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { dbQueryMany, withTransaction } from 'src/shared/db-helpers'
+import { dbQueryPaginated, withTransaction, type PaginatedResult } from 'src/shared/db-helpers'
 import type { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -12,16 +12,26 @@ export function listUserFavorites(
   userId: string,
   page: number,
   pageSize: number
-): ResultAsync<UserFavorite[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('user_favorites')
-      .selectAll()
-      .where('user_id', '=', userId)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('created_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<UserFavorite>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('user_favorites')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('user_id', '=', userId)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('user_favorites')
+        .selectAll()
+        .where('user_id', '=', userId)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('created_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

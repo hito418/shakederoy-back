@@ -16,7 +16,7 @@ import {
   listCollectionCocktails,
   addCocktailToCollection,
   removeCocktailFromCollection,
-} from 'src/features/collections/service'
+} from 'src/features/users/collections/service'
 
 const collectionsRoute = new HonoVar().basePath('/collections')
 
@@ -154,9 +154,12 @@ collectionsRoute
   .get(
     '/:collectionId/cocktails',
     sValidator('param', type({ collectionId: 'string' })),
+    sValidator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { collectionId } = ctx.req.valid('param')
+      const { page = 1 } = ctx.req.valid('query')
+      const pageSize = Number(env(ctx).PAGE_SIZE)
       const { COOKIE_SECRET } = env(ctx)
       const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
       let userId: string | undefined
@@ -165,7 +168,7 @@ collectionsRoute
         if (session.isOk()) userId = session.value.sub.id
       }
 
-      const result = await listCollectionCocktails(db, collectionId, userId)
+      const result = await listCollectionCocktails(db, collectionId, page, pageSize, userId)
 
       return result.match(
         (cocktails) => ctx.json(cocktails, 200),

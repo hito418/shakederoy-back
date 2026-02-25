@@ -2,7 +2,7 @@ import type { Database } from '@repo/schemas'
 import type { Ingredient, IngredientInsert, IngredientUpdate } from '@repo/schemas/ingredients'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -11,15 +11,20 @@ export function listIngredients(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<Ingredient[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('ingredients')
-      .selectAll()
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<Ingredient>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) => trx.selectFrom('ingredients').select((eb) => eb.fn.countAll().as('count')).execute(),
+    (trx) =>
+      trx
+        .selectFrom('ingredients')
+        .selectAll()
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('updated_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

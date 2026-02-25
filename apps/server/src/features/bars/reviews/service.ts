@@ -2,7 +2,7 @@ import type { Database } from '@repo/schemas'
 import { BarReview, BarReviewInsert, BarReviewUpdate } from '@repo/schemas/bar-reviews'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -12,16 +12,26 @@ export function listBarReviews(
   barId: string,
   page: number,
   pageSize: number
-): ResultAsync<BarReview[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('bar_reviews')
-      .selectAll()
-      .where('bar_id', '=', barId)
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<BarReview>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('bar_reviews')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('bar_id', '=', barId)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('bar_reviews')
+        .selectAll()
+        .where('bar_id', '=', barId)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('updated_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

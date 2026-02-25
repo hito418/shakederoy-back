@@ -2,7 +2,7 @@ import type { Database } from '@repo/schemas'
 import type { CocktailStyle, CocktailStyleInsert, CocktailStyleUpdate } from '@repo/schemas/cocktail-styles'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -11,15 +11,20 @@ export function listCocktailStyles(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<CocktailStyle[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('cocktail_styles')
-      .selectAll()
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<CocktailStyle>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) => trx.selectFrom('cocktail_styles').select((eb) => eb.fn.countAll().as('count')).execute(),
+    (trx) =>
+      trx
+        .selectFrom('cocktail_styles')
+        .selectAll()
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('updated_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

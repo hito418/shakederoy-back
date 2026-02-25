@@ -14,8 +14,10 @@ import {
   dbInsert,
   dbQueryFirst,
   dbQueryMany,
+  dbQueryPaginated,
   dbUpdate,
   withTransaction,
+  type PaginatedResult,
 } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
@@ -27,15 +29,20 @@ export function listBars(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<Bar[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('bars')
-      .selectAll()
-      .limit(pageSize)
-      .offset((page - 1) * pageSize)
-      .orderBy('updated_at', 'desc')
-      .execute()
+): ResultAsync<PaginatedResult<Bar>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) => trx.selectFrom('bars').select((eb) => eb.fn.countAll().as('count')).execute(),
+    (trx) =>
+      trx
+        .selectFrom('bars')
+        .selectAll()
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('updated_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 
@@ -241,15 +248,29 @@ export function deleteBarSignatureCocktail(
 
 export function listBarLikes(
   db: DB,
-  barId: string
-): ResultAsync<BarLike[], AppError> {
-  return dbQueryMany(() =>
-    db
-      .selectFrom('bar_likes')
-      .selectAll()
-      .where('bar_id', '=', barId)
-      .orderBy('created_at', 'desc')
-      .execute()
+  barId: string,
+  page: number,
+  pageSize: number
+): ResultAsync<PaginatedResult<BarLike>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) =>
+      trx
+        .selectFrom('bar_likes')
+        .select((eb) => eb.fn.countAll().as('count'))
+        .where('bar_id', '=', barId)
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('bar_likes')
+        .selectAll()
+        .where('bar_id', '=', barId)
+        .limit(pageSize)
+        .offset((page - 1) * pageSize)
+        .orderBy('created_at', 'desc')
+        .execute(),
+    page,
+    pageSize
   )
 }
 

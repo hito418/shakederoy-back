@@ -2,14 +2,18 @@ import type { Database } from '@repo/schemas'
 import { AlcoholType, AlcoholTypeInsert, AlcoholTypeUpdate } from '@repo/schemas/alcohol-types'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
-export function listAlcoholTypes(db: DB, page: number, pageSize: number): ResultAsync<AlcoholType[], AppError> {
-  return dbQueryMany(() =>
-    db.selectFrom('alcohol_types').selectAll().limit(pageSize).offset((page - 1) * pageSize).orderBy('updated_at', 'desc').execute()
+export function listAlcoholTypes(db: DB, page: number, pageSize: number): ResultAsync<PaginatedResult<AlcoholType>, AppError> {
+  return dbQueryPaginated(
+    db,
+    (trx) => trx.selectFrom('alcohol_types').select((eb) => eb.fn.countAll().as('count')).execute(),
+    (trx) => trx.selectFrom('alcohol_types').selectAll().limit(pageSize).offset((page - 1) * pageSize).orderBy('updated_at', 'desc').execute(),
+    page,
+    pageSize
   )
 }
 
