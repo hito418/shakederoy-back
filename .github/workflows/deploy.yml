@@ -45,7 +45,7 @@ jobs:
           COMPOSE_ID: ${{ secrets.COMPOSE_ID }}
           API_KEY: ${{ secrets.DEPLOYMENT_API_KEY }}
         run: |
-          curl -X POST $DEPLOYMENT_HOST/api/compose.redeploy \
+          curl -X POST $DEPLOYMENT_HOST/api/compose.deploy \
             -H "Content-Type: application/json" \
             -H "x-api-key: $API_KEY" \
             -d '{"composeId":"'"$COMPOSE_ID"'"}'

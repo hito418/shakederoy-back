@@ -1,6 +1,6 @@
 {
-  "id": "5c960497-3955-4c1d-a449-b0c5b5d12256",
-  "prevId": "82473fff-a409-4dd2-9b4e-73b01263bde5",
+  "id": "6f249398-996d-427e-a426-ba0e66f7ca36",
+  "prevId": "0c404502-7c16-44f2-be7c-e3378a41b653",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1911,10 +1911,9 @@
       "columns": {
         "id": {
           "name": "id",
-          "type": "uuid",
+          "type": "text",
           "primaryKey": true,
-          "notNull": true,
-          "default": "gen_random_uuid()"
+          "notNull": true
         },
         "user_id": {
           "name": "user_id",
@@ -2124,7 +2123,76 @@
       "uniqueConstraints": {}
     }
   },
-  "enums": {},
+  "enums": {
+    "public.bar_style": {
+      "name": "bar_style",
+      "schema": "public",
+      "values": [
+        "classic",
+        "speakeasy",
+        "tiki",
+        "rooftop",
+        "dive",
+        "wine_bar",
+        "cocktail_lounge",
+        "sports_bar",
+        "brewpub",
+        "other"
+      ]
+    },
+    "public.cocktail_status": {
+      "name": "cocktail_status",
+      "schema": "public",
+      "values": [
+        "draft",
+        "pending",
+        "approved",
+        "rejected"
+      ]
+    },
+    "public.ingredient_category": {
+      "name": "ingredient_category",
+      "schema": "public",
+      "values": [
+        "spirit",
+        "liqueur",
+        "wine",
+        "beer",
+        "mixer",
+        "juice",
+        "syrup",
+        "bitter",
+        "garnish",
+        "dairy",
+        "other"
+      ]
+    },
+    "public.party_mode": {
+      "name": "party_mode",
+      "schema": "public",
+      "values": [
+        "voting",
+        "host_picks",
+        "random"
+      ]
+    },
+    "public.user_roles": {
+      "name": "user_roles",
+      "schema": "public",
+      "values": [
+        "admin",
+        "user"
+      ]
+    },
+    "public.vote_type": {
+      "name": "vote_type",
+      "schema": "public",
+      "values": [
+        "upvote",
+        "downvote"
+      ]
+    }
+  },
   "schemas": {},
   "_meta": {
     "columns": {},

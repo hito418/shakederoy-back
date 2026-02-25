@@ -1,3 +1,39 @@
+DO $$ BEGIN
+ CREATE TYPE "public"."bar_style" AS ENUM('classic', 'speakeasy', 'tiki', 'rooftop', 'dive', 'wine_bar', 'cocktail_lounge', 'sports_bar', 'brewpub', 'other');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."cocktail_status" AS ENUM('draft', 'pending', 'approved', 'rejected');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."ingredient_category" AS ENUM('spirit', 'liqueur', 'wine', 'beer', 'mixer', 'juice', 'syrup', 'bitter', 'garnish', 'dairy', 'other');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."party_mode" AS ENUM('voting', 'host_picks', 'random');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."user_roles" AS ENUM('admin', 'user');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."vote_type" AS ENUM('upvote', 'downvote');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "alcohol_types" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"name" text NOT NULL,
@@ -130,6 +166,26 @@ CREATE TABLE IF NOT EXISTS "cocktail_views" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "cocktails" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"name" text NOT NULL,
+	"slug" text NOT NULL,
+	"description" text,
+	"intensity" integer,
+	"difficulty" integer,
+	"prep_time" integer,
+	"glass_id" uuid,
+	"status" "cocktail_status" DEFAULT 'draft' NOT NULL,
+	"created_by_id" uuid,
+	"variant_of_id" uuid,
+	"bar_id" uuid,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"deleted_at" timestamp,
+	CONSTRAINT "cocktails_name_unique" UNIQUE("name"),
+	CONSTRAINT "cocktails_slug_unique" UNIQUE("slug")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "collection_cocktails" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"collection_id" uuid NOT NULL,
@@ -241,6 +297,21 @@ CREATE TABLE IF NOT EXISTS "sessions" (
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "users" (
+	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"username" text NOT NULL,
+	"email" text NOT NULL,
+	"password" text NOT NULL,
+	"role" "user_roles" DEFAULT 'user' NOT NULL,
+	"profile_pic" text,
+	"is_bar_owner" boolean DEFAULT false NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	"deleted_at" timestamp,
+	CONSTRAINT "users_username_unique" UNIQUE("username"),
+	CONSTRAINT "users_email_unique" UNIQUE("email")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "cocktail_votes" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"cocktail_id" uuid NOT NULL,
@@ -250,19 +321,6 @@ CREATE TABLE IF NOT EXISTS "cocktail_votes" (
 	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-ALTER TABLE "cocktails" ALTER COLUMN "description" DROP NOT NULL;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "slug" text NOT NULL;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "intensity" integer;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "difficulty" integer;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "prep_time" integer;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "glass_id" uuid;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "status" "cocktail_status" DEFAULT 'draft' NOT NULL;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "created_by_id" uuid;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "variant_of_id" uuid;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "bar_id" uuid;--> statement-breakpoint
-ALTER TABLE "cocktails" ADD COLUMN "deleted_at" timestamp;--> statement-breakpoint
-ALTER TABLE "users" ADD COLUMN "is_bar_owner" boolean DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE "users" ADD COLUMN "deleted_at" timestamp;--> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "bar_likes" ADD CONSTRAINT "bar_likes_bar_id_bars_id_fk" FOREIGN KEY ("bar_id") REFERENCES "public"."bars"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
@@ -355,6 +413,24 @@ END $$;
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "cocktail_views" ADD CONSTRAINT "cocktail_views_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "cocktails" ADD CONSTRAINT "cocktails_glass_id_glasses_id_fk" FOREIGN KEY ("glass_id") REFERENCES "public"."glasses"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "cocktails" ADD CONSTRAINT "cocktails_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "cocktails" ADD CONSTRAINT "cocktails_bar_id_bars_id_fk" FOREIGN KEY ("bar_id") REFERENCES "public"."bars"("id") ON DELETE set null ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -460,26 +536,3 @@ DO $$ BEGIN
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "cocktails" ADD CONSTRAINT "cocktails_glass_id_glasses_id_fk" FOREIGN KEY ("glass_id") REFERENCES "public"."glasses"("id") ON DELETE set null ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "cocktails" ADD CONSTRAINT "cocktails_created_by_id_users_id_fk" FOREIGN KEY ("created_by_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "cocktails" ADD CONSTRAINT "cocktails_bar_id_bars_id_fk" FOREIGN KEY ("bar_id") REFERENCES "public"."bars"("id") ON DELETE set null ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-ALTER TABLE "cocktails" DROP COLUMN IF EXISTS "ingredients";--> statement-breakpoint
-ALTER TABLE "cocktails" DROP COLUMN IF EXISTS "instructions";--> statement-breakpoint
-ALTER TABLE "cocktails" DROP COLUMN IF EXISTS "image";--> statement-breakpoint
-ALTER TABLE "cocktails" ADD CONSTRAINT "cocktails_slug_unique" UNIQUE("slug");

@@ -42,6 +42,7 @@ const app = new HonoVar()
 app.get(
   "/openapi.json",
   openAPIRouteHandler(app, {
+    includeEmptyPaths: true,
     documentation: {
       info: {
         title: "ShakeDeRoy",

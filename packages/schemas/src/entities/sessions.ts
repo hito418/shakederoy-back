@@ -1,10 +1,10 @@
-import { pgTable, timestamp, uuid } from 'drizzle-orm/pg-core'
+import { pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core'
 import { users } from './users'
 import { Selectable, Insertable, Updateable } from 'kysely'
 import { Kyselify } from 'drizzle-orm/kysely'
 
 export const sessions = pgTable('sessions', {
-  id: uuid('id').defaultRandom().primaryKey(),
+  id: text('id').primaryKey(),
   userId: uuid('user_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
