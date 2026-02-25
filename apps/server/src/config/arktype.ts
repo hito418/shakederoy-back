@@ -1,14 +1,12 @@
-import { configure } from "arktype/config";
+import { configure } from 'arktype/config'
 
-configure({toJsonSchema:{fallback: {
-  morph: (ctx) => {
-    console.log(ctx)
-    return {
-      ...ctx.base,
-      
-    }
+configure({
+  toJsonSchema: {
+    fallback: {
+      morph: (ctx) => ({
+        ...ctx.base,
+      }),
+      predicate: (ctx) => ({ ...ctx.base }),
+    },
   },
-  predicate: (ctx) => {
-    console.log(ctx)
-    return {...ctx.base}}
-}}})
+})
