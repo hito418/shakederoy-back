@@ -1,4 +1,4 @@
-import { type, Type } from 'arktype'
+import { type } from 'arktype'
 import { resolver } from 'hono-openapi'
 
 export const timestamps = {
@@ -36,7 +36,7 @@ export const errorResponses: Record<401 | 404 | 409 | 500, ErrorResponseEntry> =
 
 export { strip }
 
-export function paginatedSchema<T extends Type>(itemType: T) {
+export function paginatedSchema<t>(itemType: type.Any<t>) {
   return type({
     '+': 'delete',
     data: itemType.array(),
