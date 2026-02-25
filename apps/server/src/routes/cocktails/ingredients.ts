@@ -10,7 +10,7 @@ import {
   createIngredient,
   updateIngredient,
   deleteIngredient,
-} from 'src/features/ingredients/service'
+} from 'src/features/cocktails/ingredients/service'
 
 const ingredientsRoute = new HonoVar().basePath('/ingredients')
 

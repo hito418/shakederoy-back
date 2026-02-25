@@ -10,7 +10,7 @@ import {
   createGlass,
   updateGlass,
   deleteGlass,
-} from 'src/features/glasses/service'
+} from 'src/features/cocktails/glasses/service'
 
 const glassesRoute = new HonoVar().basePath('/glasses')
 

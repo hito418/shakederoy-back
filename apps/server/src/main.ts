@@ -8,11 +8,7 @@ import { HonoVar } from './shared/hono'
 import authRoute from './routes/auth'
 import cocktailsRoute from './routes/cocktails'
 import usersRoute from './routes/users'
-import glassesRoute from './routes/glasses'
-import alcoholTypesRoute from './routes/alcohol-types'
-import ingredientsRoute from './routes/ingredients'
 import barsRoute from './routes/bars'
-import collectionsRoute from './routes/collections'
 import partiesRoute from './routes/parties'
 import { openAPIRouteHandler } from 'hono-openapi'
 // import seedDb from './lib/seed'
@@ -37,11 +33,7 @@ const app = new HonoVar()
   .route('/', authRoute)
   .route('/', usersRoute)
   .route('/', cocktailsRoute)
-  .route('/', glassesRoute)
-  .route('/', alcoholTypesRoute)
-  .route('/', ingredientsRoute)
   .route('/', barsRoute)
-  .route('/', collectionsRoute)
   .route('/', partiesRoute)
   .get('/healthcheck', (ctx) => {
     return ctx.json({ status: 'ok' }, 200)

@@ -14,6 +14,7 @@ import {
   deleteUser,
 } from 'src/features/users/service'
 import favoritesRoute from './favorites'
+import collectionsRoute from './collections'
 
 const usersRoute = new HonoVar().basePath('/users')
 
@@ -196,5 +197,6 @@ usersRoute.delete('/delete/self', isAuth(), async (ctx) => {
 })
 
 usersRoute.route('/', favoritesRoute)
+usersRoute.route('/', collectionsRoute)
 
 export default usersRoute

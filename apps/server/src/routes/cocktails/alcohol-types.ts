@@ -10,7 +10,7 @@ import {
   createAlcoholType,
   updateAlcoholType,
   deleteAlcoholType,
-} from 'src/features/alcohol-types/service'
+} from 'src/features/cocktails/alcohol-types/service'
 
 const alcoholTypesRoute = new HonoVar().basePath('/alcohol-types')
 

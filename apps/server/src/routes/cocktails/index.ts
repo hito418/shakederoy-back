@@ -14,6 +14,9 @@ import {
 import stylesRoute from './styles'
 import extrasRoute from './extras'
 import analyticsRoute from './analytics'
+import glassesRoute from './glasses'
+import alcoholTypesRoute from './alcohol-types'
+import ingredientsRoute from './ingredients'
 
 const cocktailsRoute = new HonoVar().basePath('/cocktails')
 
@@ -138,5 +141,8 @@ cocktailsRoute
   .route('/styles', stylesRoute)
   .route('/', extrasRoute)
   .route('/', analyticsRoute)
+  .route('/', glassesRoute)
+  .route('/', alcoholTypesRoute)
+  .route('/', ingredientsRoute)
 
 export default cocktailsRoute
