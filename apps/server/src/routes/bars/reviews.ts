@@ -1,9 +1,14 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import {
+  BarReviewSchema,
+  BarReviewPaginatedSchema,
+} from 'src/features/bars/bars.dto'
 import {
   listBarReviews,
   getBarReviewById,
@@ -17,8 +22,19 @@ const reviewsRoute = new HonoVar()
 reviewsRoute
   .get(
     '/:barId/reviews',
-    sValidator('param', type({ barId: 'string' })),
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Bar Reviews'],
+      summary: 'List bar reviews',
+      responses: {
+        200: {
+          description: 'Paginated list of bar reviews',
+          content: { 'application/json': { schema: resolver(BarReviewPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ barId: 'string' })),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
@@ -35,9 +51,20 @@ reviewsRoute
   )
   .post(
     '/:barId/reviews',
+    describeRoute({
+      tags: ['Bar Reviews'],
+      summary: 'Create bar review',
+      responses: {
+        201: {
+          description: 'Created bar review',
+          content: { 'application/json': { schema: resolver(BarReviewSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ barId: 'string' })),
-    sValidator(
+    validator('param', type({ barId: 'string' })),
+    validator(
       'json',
       type({
         rating: '1 <= number.integer <= 5',
@@ -65,22 +92,48 @@ reviewsRoute
   )
 
 reviewsRoute
-  .get('/reviews/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .get(
+    '/reviews/:id',
+    describeRoute({
+      tags: ['Bar Reviews'],
+      summary: 'Get bar review by ID',
+      responses: {
+        200: {
+          description: 'Bar review details',
+          content: { 'application/json': { schema: resolver(BarReviewSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
 
-    const result = await getBarReviewById(db, id)
+      const result = await getBarReviewById(db, id)
 
-    return result.match(
-      (review) => ctx.json(review, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (review) => ctx.json(review, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .put(
     '/reviews/:id',
+    describeRoute({
+      tags: ['Bar Reviews'],
+      summary: 'Update bar review',
+      responses: {
+        200: {
+          description: 'Updated bar review',
+          content: { 'application/json': { schema: resolver(BarReviewSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         'rating?': '1 <= number.integer <= 5',
@@ -103,8 +156,19 @@ reviewsRoute
   )
   .delete(
     '/reviews/:id',
+    describeRoute({
+      tags: ['Bar Reviews'],
+      summary: 'Delete bar review',
+      responses: {
+        200: {
+          description: 'Deleted bar review',
+          content: { 'application/json': { schema: resolver(BarReviewSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')

@@ -1,9 +1,11 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import { UserFavoritePaginatedSchema, FavoriteToggleSchema } from 'src/features/users/users.dto'
 import { listUserFavorites, toggleFavorite } from 'src/features/users/favorites.service'
 
 const favoritesRoute = new HonoVar()
@@ -11,8 +13,19 @@ const favoritesRoute = new HonoVar()
 favoritesRoute
   .get(
     '/favorites',
+    describeRoute({
+      tags: ['User Favorites'],
+      summary: 'List user favorites',
+      responses: {
+        200: {
+          description: 'Paginated list of user favorites',
+          content: { 'application/json': { schema: resolver(UserFavoritePaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const payload = ctx.get('userPayload')
@@ -29,8 +42,19 @@ favoritesRoute
   )
   .post(
     '/favorites/toggle',
+    describeRoute({
+      tags: ['User Favorites'],
+      summary: 'Toggle cocktail favorite',
+      responses: {
+        200: {
+          description: 'Favorite toggled',
+          content: { 'application/json': { schema: resolver(FavoriteToggleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('json', type({ cocktailId: 'string' })),
+    validator('json', type({ cocktailId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const payload = ctx.get('userPayload')

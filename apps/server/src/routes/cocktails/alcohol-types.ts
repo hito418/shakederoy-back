@@ -1,9 +1,11 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import { AlcoholTypeSchema, AlcoholTypePaginatedSchema } from 'src/features/cocktails/cocktails.dto'
 import {
   listAlcoholTypes,
   getAlcoholTypeById,
@@ -17,7 +19,18 @@ const alcoholTypesRoute = new HonoVar().basePath('/alcohol-types')
 alcoholTypesRoute
   .get(
     '/',
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Alcohol Types'],
+      summary: 'List alcohol types',
+      responses: {
+        200: {
+          description: 'Paginated list of alcohol types',
+          content: { 'application/json': { schema: resolver(AlcoholTypePaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
@@ -31,21 +44,47 @@ alcoholTypesRoute
       )
     }
   )
-  .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .get(
+    '/:id',
+    describeRoute({
+      tags: ['Alcohol Types'],
+      summary: 'Get alcohol type by ID',
+      responses: {
+        200: {
+          description: 'Alcohol type details',
+          content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
 
-    const result = await getAlcoholTypeById(db, id)
+      const result = await getAlcoholTypeById(db, id)
 
-    return result.match(
-      (alcoholType) => ctx.json(alcoholType, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (alcoholType) => ctx.json(alcoholType, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/create',
+    describeRoute({
+      tags: ['Alcohol Types'],
+      summary: 'Create alcohol type',
+      responses: {
+        201: {
+          description: 'Created alcohol type',
+          content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator(
+    validator(
       'json',
       type({
         name: 'string >= 1',
@@ -73,9 +112,20 @@ alcoholTypesRoute
   )
   .put(
     '/:id',
+    describeRoute({
+      tags: ['Alcohol Types'],
+      summary: 'Update alcohol type',
+      responses: {
+        200: {
+          description: 'Updated alcohol type',
+          content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         name: 'string >= 1?',
@@ -104,8 +154,19 @@ alcoholTypesRoute
   )
   .delete(
     '/:id',
+    describeRoute({
+      tags: ['Alcohol Types'],
+      summary: 'Delete alcohol type',
+      responses: {
+        200: {
+          description: 'Deleted alcohol type',
+          content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')

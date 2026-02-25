@@ -1,9 +1,18 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import {
+  BarSchema,
+  BarPaginatedSchema,
+  BarPhotoSchema,
+  BarSignatureCocktailSchema,
+  BarLikePaginatedSchema,
+  BarLikeToggleSchema,
+} from 'src/features/bars/bars.dto'
 import {
   listBars,
   getBarById,
@@ -28,7 +37,18 @@ const barsRoute = new HonoVar().basePath('/bars')
 barsRoute
   .get(
     '/',
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Bars'],
+      summary: 'List bars',
+      responses: {
+        200: {
+          description: 'Paginated list of bars',
+          content: { 'application/json': { schema: resolver(BarPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
@@ -42,21 +62,47 @@ barsRoute
       )
     }
   )
-  .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .get(
+    '/:id',
+    describeRoute({
+      tags: ['Bars'],
+      summary: 'Get bar by ID',
+      responses: {
+        200: {
+          description: 'Bar details',
+          content: { 'application/json': { schema: resolver(BarSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
 
-    const result = await getBarById(db, id)
+      const result = await getBarById(db, id)
 
-    return result.match(
-      (bar) => ctx.json(bar, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (bar) => ctx.json(bar, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/create',
+    describeRoute({
+      tags: ['Bars'],
+      summary: 'Create bar',
+      responses: {
+        201: {
+          description: 'Created bar',
+          content: { 'application/json': { schema: resolver(BarSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator(
+    validator(
       'json',
       type({
         name: 'string >= 1',
@@ -102,9 +148,20 @@ barsRoute
   )
   .put(
     '/:id',
+    describeRoute({
+      tags: ['Bars'],
+      summary: 'Update bar',
+      responses: {
+        200: {
+          description: 'Updated bar',
+          content: { 'application/json': { schema: resolver(BarSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         'name?': 'string >= 1',
@@ -150,8 +207,19 @@ barsRoute
   )
   .delete(
     '/:id',
+    describeRoute({
+      tags: ['Bars'],
+      summary: 'Delete bar',
+      responses: {
+        200: {
+          description: 'Deleted bar',
+          content: { 'application/json': { schema: resolver(BarSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -169,22 +237,48 @@ barsRoute
 // --- Bar Photos ---
 
 barsRoute
-  .get('/:barId/photos', sValidator('param', type({ barId: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { barId } = ctx.req.valid('param')
+  .get(
+    '/:barId/photos',
+    describeRoute({
+      tags: ['Bar Photos'],
+      summary: 'List bar photos',
+      responses: {
+        200: {
+          description: 'List of bar photos',
+          content: { 'application/json': { schema: resolver(BarPhotoSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ barId: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { barId } = ctx.req.valid('param')
 
-    const result = await listBarPhotos(db, barId)
+      const result = await listBarPhotos(db, barId)
 
-    return result.match(
-      (photos) => ctx.json(photos, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (photos) => ctx.json(photos, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/:barId/photos',
+    describeRoute({
+      tags: ['Bar Photos'],
+      summary: 'Add bar photo',
+      responses: {
+        201: {
+          description: 'Created bar photo',
+          content: { 'application/json': { schema: resolver(BarPhotoSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ barId: 'string' })),
-    sValidator(
+    validator('param', type({ barId: 'string' })),
+    validator(
       'json',
       type({
         url: 'string >= 1',
@@ -215,8 +309,19 @@ barsRoute
 
 barsRoute.delete(
   '/photos/:id',
+  describeRoute({
+    tags: ['Bar Photos'],
+    summary: 'Delete bar photo',
+    responses: {
+      200: {
+        description: 'Deleted bar photo',
+        content: { 'application/json': { schema: resolver(BarPhotoSchema) } },
+      },
+      ...errorResponses,
+    },
+  }),
   isAuth(),
-  sValidator('param', type({ id: 'string' })),
+  validator('param', type({ id: 'string' })),
   async (ctx) => {
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
@@ -234,22 +339,48 @@ barsRoute.delete(
 // --- Bar Signature Cocktails ---
 
 barsRoute
-  .get('/:barId/signature-cocktails', sValidator('param', type({ barId: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { barId } = ctx.req.valid('param')
+  .get(
+    '/:barId/signature-cocktails',
+    describeRoute({
+      tags: ['Bar Signature Cocktails'],
+      summary: 'List bar signature cocktails',
+      responses: {
+        200: {
+          description: 'List of bar signature cocktails',
+          content: { 'application/json': { schema: resolver(BarSignatureCocktailSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ barId: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { barId } = ctx.req.valid('param')
 
-    const result = await listBarSignatureCocktails(db, barId)
+      const result = await listBarSignatureCocktails(db, barId)
 
-    return result.match(
-      (cocktails) => ctx.json(cocktails, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (cocktails) => ctx.json(cocktails, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/:barId/signature-cocktails',
+    describeRoute({
+      tags: ['Bar Signature Cocktails'],
+      summary: 'Add bar signature cocktail',
+      responses: {
+        201: {
+          description: 'Created bar signature cocktail',
+          content: { 'application/json': { schema: resolver(BarSignatureCocktailSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ barId: 'string' })),
-    sValidator(
+    validator('param', type({ barId: 'string' })),
+    validator(
       'json',
       type({
         cocktailId: 'string >= 1',
@@ -282,8 +413,19 @@ barsRoute
 
 barsRoute.delete(
   '/signature-cocktails/:id',
+  describeRoute({
+    tags: ['Bar Signature Cocktails'],
+    summary: 'Remove bar signature cocktail',
+    responses: {
+      200: {
+        description: 'Removed bar signature cocktail',
+        content: { 'application/json': { schema: resolver(BarSignatureCocktailSchema) } },
+      },
+      ...errorResponses,
+    },
+  }),
   isAuth(),
-  sValidator('param', type({ id: 'string' })),
+  validator('param', type({ id: 'string' })),
   async (ctx) => {
     const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
@@ -303,8 +445,19 @@ barsRoute.delete(
 barsRoute
   .get(
     '/:barId/likes',
-    sValidator('param', type({ barId: 'string' })),
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Bar Likes'],
+      summary: 'List bar likes',
+      responses: {
+        200: {
+          description: 'Paginated list of bar likes',
+          content: { 'application/json': { schema: resolver(BarLikePaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ barId: 'string' })),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
@@ -319,18 +472,34 @@ barsRoute
       )
     }
   )
-  .post('/:barId/likes/toggle', isAuth(), sValidator('param', type({ barId: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { barId } = ctx.req.valid('param')
-    const payload = ctx.get('userPayload')
+  .post(
+    '/:barId/likes/toggle',
+    describeRoute({
+      tags: ['Bar Likes'],
+      summary: 'Toggle bar like',
+      responses: {
+        200: {
+          description: 'Like toggle result',
+          content: { 'application/json': { schema: resolver(BarLikeToggleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    isAuth(),
+    validator('param', type({ barId: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { barId } = ctx.req.valid('param')
+      const payload = ctx.get('userPayload')
 
-    const result = await toggleBarLike(db, barId, payload.sub.id)
+      const result = await toggleBarLike(db, barId, payload.sub.id)
 
-    return result.match(
-      (toggle) => ctx.json(toggle, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (toggle) => ctx.json(toggle, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .route('/', reviewsRoute)
 
 export default barsRoute

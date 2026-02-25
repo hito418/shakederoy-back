@@ -1,9 +1,11 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import { CocktailStyleSchema, CocktailStylePaginatedSchema } from 'src/features/cocktails/cocktails.dto'
 import {
   listCocktailStyles,
   getCocktailStyleById,
@@ -17,7 +19,18 @@ const stylesRoute = new HonoVar()
 stylesRoute
   .get(
     '/',
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Cocktail Styles'],
+      summary: 'List cocktail styles',
+      responses: {
+        200: {
+          description: 'Paginated list of cocktail styles',
+          content: { 'application/json': { schema: resolver(CocktailStylePaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
@@ -31,21 +44,47 @@ stylesRoute
       )
     }
   )
-  .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .get(
+    '/:id',
+    describeRoute({
+      tags: ['Cocktail Styles'],
+      summary: 'Get cocktail style by ID',
+      responses: {
+        200: {
+          description: 'Cocktail style details',
+          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
 
-    const result = await getCocktailStyleById(db, id)
+      const result = await getCocktailStyleById(db, id)
 
-    return result.match(
-      (style) => ctx.json(style, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (style) => ctx.json(style, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/create',
+    describeRoute({
+      tags: ['Cocktail Styles'],
+      summary: 'Create cocktail style',
+      responses: {
+        201: {
+          description: 'Created cocktail style',
+          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator(
+    validator(
       'json',
       type({
         name: 'string >= 1',
@@ -66,9 +105,20 @@ stylesRoute
   )
   .put(
     '/:id',
+    describeRoute({
+      tags: ['Cocktail Styles'],
+      summary: 'Update cocktail style',
+      responses: {
+        200: {
+          description: 'Updated cocktail style',
+          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         'name?': 'string >= 1',
@@ -90,8 +140,19 @@ stylesRoute
   )
   .delete(
     '/:id',
+    describeRoute({
+      tags: ['Cocktail Styles'],
+      summary: 'Delete cocktail style',
+      responses: {
+        200: {
+          description: 'Deleted cocktail style',
+          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')

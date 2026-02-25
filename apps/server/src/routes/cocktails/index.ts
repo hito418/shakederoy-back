@@ -1,9 +1,11 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import { CocktailSchema, CocktailPaginatedSchema } from 'src/features/cocktails/cocktails.dto'
 import {
   listCocktails,
   getCocktailById,
@@ -23,7 +25,18 @@ const cocktailsRoute = new HonoVar().basePath('/cocktails')
 cocktailsRoute
   .get(
     '/',
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'List cocktails',
+      responses: {
+        200: {
+          description: 'Paginated list of cocktails',
+          content: { 'application/json': { schema: resolver(CocktailPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
@@ -37,21 +50,47 @@ cocktailsRoute
       )
     }
   )
-  .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .get(
+    '/:id',
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Get cocktail by ID',
+      responses: {
+        200: {
+          description: 'Cocktail details',
+          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
 
-    const result = await getCocktailById(db, id)
+      const result = await getCocktailById(db, id)
 
-    return result.match(
-      (cocktail) => ctx.json(cocktail, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (cocktail) => ctx.json(cocktail, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/create',
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Create cocktail',
+      responses: {
+        201: {
+          description: 'Created cocktail',
+          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator(
+    validator(
       'json',
       type({
         name: 'string > 3',
@@ -87,9 +126,20 @@ cocktailsRoute
   )
   .put(
     '/:id',
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Update cocktail',
+      responses: {
+        200: {
+          description: 'Updated cocktail',
+          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         'name?': 'string > 3',
@@ -124,8 +174,19 @@ cocktailsRoute
   )
   .delete(
     '/:id',
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Delete cocktail',
+      responses: {
+        200: {
+          description: 'Deleted cocktail',
+          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')

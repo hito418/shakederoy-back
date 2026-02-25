@@ -1,11 +1,13 @@
-import { sValidator } from '@hono/standard-validator'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { isAuth } from 'src/features/auth/auth.middleware'
+import { SafeUserSchema, SessionPayloadSchema } from 'src/features/auth/auth.dto'
 import { initAdmin, registerUser, loginUser } from 'src/features/auth/auth.service'
 import { createSession, validateSession, deleteSession } from 'src/features/auth/session.service'
 import { env } from 'hono/adapter'
 import { type } from 'arktype'
 import { HonoVar } from 'src/shared/hono'
+import { errorResponses } from 'src/shared/response-schemas'
 import { errorToHttpStatus } from 'src/shared/errors'
 
 const SESSION_COOKIE_OPTIONS = {
@@ -19,7 +21,18 @@ const authRoute = new HonoVar()
   .basePath('/auth')
   .post(
     '/init',
-    sValidator(
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Initialize admin account',
+      responses: {
+        201: {
+          description: 'Admin account created',
+          content: { 'application/json': { schema: resolver(SafeUserSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator(
       'json',
       type({
         username: 'string >= 3',
@@ -41,7 +54,18 @@ const authRoute = new HonoVar()
   )
   .post(
     '/register',
-    sValidator(
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Register',
+      responses: {
+        201: {
+          description: 'User registered and session created',
+          content: { 'application/json': { schema: resolver(SessionPayloadSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator(
       'json',
       type({
         username: 'string >= 3',
@@ -71,6 +95,17 @@ const authRoute = new HonoVar()
   )
   .post(
     '/login',
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Login',
+      responses: {
+        200: {
+          description: 'Logged in and session created',
+          content: { 'application/json': { schema: resolver(SessionPayloadSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     async (ctx, next) => {
       const { COOKIE_SECRET } = env(ctx)
       const db = ctx.get('database')
@@ -90,7 +125,7 @@ const authRoute = new HonoVar()
 
       return ctx.json(result.value, 200)
     },
-    sValidator(
+    validator(
       'json',
       type({
         credential: 'string',
@@ -117,17 +152,29 @@ const authRoute = new HonoVar()
       return ctx.json(payload, 200)
     }
   )
-  .get('/logout', isAuth(), async (ctx) => {
-    const { COOKIE_SECRET } = env(ctx)
-    const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
+  .get(
+    '/logout',
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Logout',
+      responses: {
+        200: { description: 'Logged out' },
+        ...errorResponses,
+      },
+    }),
+    isAuth(),
+    async (ctx) => {
+      const { COOKIE_SECRET } = env(ctx)
+      const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
-    if (sessionId) {
-      const db = ctx.get('database')
-      await deleteSession(db, sessionId)
+      if (sessionId) {
+        const db = ctx.get('database')
+        await deleteSession(db, sessionId)
+      }
+
+      deleteCookie(ctx, 'session_id')
+      return ctx.text('Logged out', 200)
     }
-
-    deleteCookie(ctx, 'session_id')
-    return ctx.text('Logged out', 200)
-  })
+  )
 
 export default authRoute

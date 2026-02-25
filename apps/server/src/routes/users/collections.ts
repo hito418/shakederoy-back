@@ -1,11 +1,18 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { getSignedCookie } from 'hono/cookie'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { validateSession } from 'src/features/auth/session.service'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import {
+  CollectionSchema,
+  CollectionPaginatedSchema,
+  CollectionCocktailSchema,
+  CollectionCocktailPaginatedSchema,
+} from 'src/features/users/users.dto'
 import {
   listCollections,
   listPublicCollections,
@@ -23,8 +30,19 @@ const collectionsRoute = new HonoVar().basePath('/collections')
 collectionsRoute
   .get(
     '/',
+    describeRoute({
+      tags: ['Collections'],
+      summary: 'List my collections',
+      responses: {
+        200: {
+          description: 'Paginated list of collections',
+          content: { 'application/json': { schema: resolver(CollectionPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
@@ -41,7 +59,18 @@ collectionsRoute
   )
   .get(
     '/public',
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Collections'],
+      summary: 'List public collections',
+      responses: {
+        200: {
+          description: 'Paginated list of public collections',
+          content: { 'application/json': { schema: resolver(CollectionPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
@@ -55,28 +84,54 @@ collectionsRoute
       )
     }
   )
-  .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
-    const { COOKIE_SECRET } = env(ctx)
-    const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
-    let userId: string | undefined
-    if (sessionId) {
-      const session = await validateSession(db, sessionId)
-      if (session.isOk()) userId = session.value.sub.id
+  .get(
+    '/:id',
+    describeRoute({
+      tags: ['Collections'],
+      summary: 'Get collection by ID',
+      responses: {
+        200: {
+          description: 'Collection found',
+          content: { 'application/json': { schema: resolver(CollectionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
+      const { COOKIE_SECRET } = env(ctx)
+      const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
+      let userId: string | undefined
+      if (sessionId) {
+        const session = await validateSession(db, sessionId)
+        if (session.isOk()) userId = session.value.sub.id
+      }
+
+      const result = await getCollectionById(db, id, userId)
+
+      return result.match(
+        (collection) => ctx.json(collection, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
-
-    const result = await getCollectionById(db, id, userId)
-
-    return result.match(
-      (collection) => ctx.json(collection, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+  )
   .post(
     '/create',
+    describeRoute({
+      tags: ['Collections'],
+      summary: 'Create collection',
+      responses: {
+        201: {
+          description: 'Collection created',
+          content: { 'application/json': { schema: resolver(CollectionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator(
+    validator(
       'json',
       type({
         name: 'string >= 1',
@@ -104,9 +159,20 @@ collectionsRoute
   )
   .put(
     '/:id',
+    describeRoute({
+      tags: ['Collections'],
+      summary: 'Update collection',
+      responses: {
+        200: {
+          description: 'Collection updated',
+          content: { 'application/json': { schema: resolver(CollectionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         'name?': 'string >= 1',
@@ -135,8 +201,19 @@ collectionsRoute
   )
   .delete(
     '/:id',
+    describeRoute({
+      tags: ['Collections'],
+      summary: 'Delete collection',
+      responses: {
+        200: {
+          description: 'Collection deleted',
+          content: { 'application/json': { schema: resolver(CollectionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -153,8 +230,19 @@ collectionsRoute
   )
   .get(
     '/:collectionId/cocktails',
-    sValidator('param', type({ collectionId: 'string' })),
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Collection Cocktails'],
+      summary: 'List collection cocktails',
+      responses: {
+        200: {
+          description: 'Paginated list of collection cocktails',
+          content: { 'application/json': { schema: resolver(CollectionCocktailPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ collectionId: 'string' })),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { collectionId } = ctx.req.valid('param')
@@ -178,9 +266,20 @@ collectionsRoute
   )
   .post(
     '/:collectionId/cocktails',
+    describeRoute({
+      tags: ['Collection Cocktails'],
+      summary: 'Add cocktail to collection',
+      responses: {
+        201: {
+          description: 'Cocktail added to collection',
+          content: { 'application/json': { schema: resolver(CollectionCocktailSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ collectionId: 'string' })),
-    sValidator(
+    validator('param', type({ collectionId: 'string' })),
+    validator(
       'json',
       type({
         cocktailId: 'string',
@@ -205,8 +304,19 @@ collectionsRoute
   )
   .delete(
     '/cocktails/:id',
+    describeRoute({
+      tags: ['Collection Cocktails'],
+      summary: 'Remove cocktail from collection',
+      responses: {
+        200: {
+          description: 'Cocktail removed from collection',
+          content: { 'application/json': { schema: resolver(CollectionCocktailSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')

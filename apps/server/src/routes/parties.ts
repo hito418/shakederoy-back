@@ -1,9 +1,17 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import {
+  PartySessionSchema,
+  PartySessionPaginatedSchema,
+  PartyParticipantSchema,
+  PartyParticipantStyleSchema,
+  PartyCocktailSelectionSchema,
+} from 'src/features/parties/parties.dto'
 import {
   listPartySessions,
   getPartySessionById,
@@ -31,7 +39,18 @@ const partiesRoute = new HonoVar().basePath('/parties')
 partiesRoute
   .get(
     '/',
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Party Sessions'],
+      summary: 'List party sessions',
+      responses: {
+        200: {
+          description: 'Paginated list of party sessions',
+          content: { 'application/json': { schema: resolver(PartySessionPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
@@ -47,7 +66,18 @@ partiesRoute
   )
   .get(
     '/code/:code',
-    sValidator('param', type({ code: 'string' })),
+    describeRoute({
+      tags: ['Party Sessions'],
+      summary: 'Get party session by code',
+      responses: {
+        200: {
+          description: 'Party session found',
+          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ code: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { code } = ctx.req.valid('param')
@@ -62,7 +92,18 @@ partiesRoute
   )
   .get(
     '/:id',
-    sValidator('param', type({ id: 'string' })),
+    describeRoute({
+      tags: ['Party Sessions'],
+      summary: 'Get party session by ID',
+      responses: {
+        200: {
+          description: 'Party session found',
+          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -77,8 +118,19 @@ partiesRoute
   )
   .post(
     '/create',
+    describeRoute({
+      tags: ['Party Sessions'],
+      summary: 'Create party session',
+      responses: {
+        201: {
+          description: 'Party session created',
+          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator(
+    validator(
       'json',
       type({
         code: 'string >= 4',
@@ -106,9 +158,20 @@ partiesRoute
   )
   .put(
     '/:id',
+    describeRoute({
+      tags: ['Party Sessions'],
+      summary: 'Update party session',
+      responses: {
+        200: {
+          description: 'Party session updated',
+          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         name: 'string?',
@@ -137,8 +200,19 @@ partiesRoute
   )
   .delete(
     '/:id',
+    describeRoute({
+      tags: ['Party Sessions'],
+      summary: 'Delete party session',
+      responses: {
+        200: {
+          description: 'Party session deleted',
+          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -158,7 +232,18 @@ partiesRoute
 
   .get(
     '/:sessionId/participants',
-    sValidator('param', type({ sessionId: 'string' })),
+    describeRoute({
+      tags: ['Party Participants'],
+      summary: 'List party participants',
+      responses: {
+        200: {
+          description: 'List of party participants',
+          content: { 'application/json': { schema: resolver(PartyParticipantSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ sessionId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { sessionId } = ctx.req.valid('param')
@@ -173,9 +258,20 @@ partiesRoute
   )
   .post(
     '/:sessionId/participants',
+    describeRoute({
+      tags: ['Party Participants'],
+      summary: 'Add party participant',
+      responses: {
+        201: {
+          description: 'Party participant added',
+          content: { 'application/json': { schema: resolver(PartyParticipantSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ sessionId: 'string' })),
-    sValidator(
+    validator('param', type({ sessionId: 'string' })),
+    validator(
       'json',
       type({
         userId: 'string?',
@@ -205,9 +301,20 @@ partiesRoute
   )
   .put(
     '/participants/:id',
+    describeRoute({
+      tags: ['Party Participants'],
+      summary: 'Update party participant',
+      responses: {
+        200: {
+          description: 'Party participant updated',
+          content: { 'application/json': { schema: resolver(PartyParticipantSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         guestName: 'string?',
@@ -234,8 +341,19 @@ partiesRoute
   )
   .delete(
     '/participants/:id',
+    describeRoute({
+      tags: ['Party Participants'],
+      summary: 'Remove party participant',
+      responses: {
+        200: {
+          description: 'Party participant removed',
+          content: { 'application/json': { schema: resolver(PartyParticipantSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -253,7 +371,18 @@ partiesRoute
 
   .get(
     '/participants/:participantId/styles',
-    sValidator('param', type({ participantId: 'string' })),
+    describeRoute({
+      tags: ['Participant Styles'],
+      summary: 'List participant styles',
+      responses: {
+        200: {
+          description: 'List of participant styles',
+          content: { 'application/json': { schema: resolver(PartyParticipantStyleSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ participantId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { participantId } = ctx.req.valid('param')
@@ -268,9 +397,20 @@ partiesRoute
   )
   .post(
     '/participants/:participantId/styles',
+    describeRoute({
+      tags: ['Participant Styles'],
+      summary: 'Add participant style',
+      responses: {
+        201: {
+          description: 'Participant style added',
+          content: { 'application/json': { schema: resolver(PartyParticipantStyleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ participantId: 'string' })),
-    sValidator('json', type({ styleId: 'string' })),
+    validator('param', type({ participantId: 'string' })),
+    validator('json', type({ styleId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { participantId } = ctx.req.valid('param')
@@ -289,8 +429,19 @@ partiesRoute
   )
   .delete(
     '/participant-styles/:id',
+    describeRoute({
+      tags: ['Participant Styles'],
+      summary: 'Remove participant style',
+      responses: {
+        200: {
+          description: 'Participant style removed',
+          content: { 'application/json': { schema: resolver(PartyParticipantStyleSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -308,7 +459,18 @@ partiesRoute
 
   .get(
     '/:sessionId/selections',
-    sValidator('param', type({ sessionId: 'string' })),
+    describeRoute({
+      tags: ['Party Selections'],
+      summary: 'List party selections',
+      responses: {
+        200: {
+          description: 'List of party selections',
+          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ sessionId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { sessionId } = ctx.req.valid('param')
@@ -323,9 +485,20 @@ partiesRoute
   )
   .post(
     '/:sessionId/selections',
+    describeRoute({
+      tags: ['Party Selections'],
+      summary: 'Add party selection',
+      responses: {
+        201: {
+          description: 'Party selection added',
+          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ sessionId: 'string' })),
-    sValidator(
+    validator('param', type({ sessionId: 'string' })),
+    validator(
       'json',
       type({
         cocktailId: 'string',
@@ -353,9 +526,20 @@ partiesRoute
   )
   .put(
     '/selections/:id',
+    describeRoute({
+      tags: ['Party Selections'],
+      summary: 'Update party selection',
+      responses: {
+        200: {
+          description: 'Party selection updated',
+          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         voteCount: 'number?',
@@ -380,8 +564,19 @@ partiesRoute
   )
   .delete(
     '/selections/:id',
+    describeRoute({
+      tags: ['Party Selections'],
+      summary: 'Remove party selection',
+      responses: {
+        200: {
+          description: 'Party selection removed',
+          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')

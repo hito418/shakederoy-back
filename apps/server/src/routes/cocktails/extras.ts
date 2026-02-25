@@ -1,8 +1,15 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import {
+  CocktailIngredientSchema,
+  CocktailPhotoSchema,
+  PreparationStepSchema,
+  CocktailStyleJunctionSchema,
+} from 'src/features/cocktails/cocktails.dto'
 import {
   listCocktailIngredients,
   createCocktailIngredient,
@@ -27,7 +34,18 @@ const extrasRoute = new HonoVar()
 extrasRoute
   .get(
     '/:cocktailId/ingredients',
-    sValidator('param', type({ cocktailId: 'string' })),
+    describeRoute({
+      tags: ['Cocktail Ingredients'],
+      summary: 'List cocktail ingredients',
+      responses: {
+        200: {
+          description: 'List of cocktail ingredients',
+          content: { 'application/json': { schema: resolver(CocktailIngredientSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
@@ -42,9 +60,20 @@ extrasRoute
   )
   .post(
     '/:cocktailId/ingredients',
+    describeRoute({
+      tags: ['Cocktail Ingredients'],
+      summary: 'Add ingredient to cocktail',
+      responses: {
+        201: {
+          description: 'Ingredient added to cocktail',
+          content: { 'application/json': { schema: resolver(CocktailIngredientSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ cocktailId: 'string' })),
-    sValidator(
+    validator('param', type({ cocktailId: 'string' })),
+    validator(
       'json',
       type({
         ingredientId: 'string',
@@ -76,9 +105,20 @@ extrasRoute
 extrasRoute
   .put(
     '/ingredients/:id',
+    describeRoute({
+      tags: ['Cocktail Ingredients'],
+      summary: 'Update cocktail ingredient',
+      responses: {
+        200: {
+          description: 'Updated cocktail ingredient',
+          content: { 'application/json': { schema: resolver(CocktailIngredientSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         quantity: 'string?',
@@ -101,8 +141,19 @@ extrasRoute
   )
   .delete(
     '/ingredients/:id',
+    describeRoute({
+      tags: ['Cocktail Ingredients'],
+      summary: 'Remove cocktail ingredient',
+      responses: {
+        200: {
+          description: 'Removed cocktail ingredient',
+          content: { 'application/json': { schema: resolver(CocktailIngredientSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -120,7 +171,18 @@ extrasRoute
 
   .get(
     '/:cocktailId/photos',
-    sValidator('param', type({ cocktailId: 'string' })),
+    describeRoute({
+      tags: ['Cocktail Photos'],
+      summary: 'List cocktail photos',
+      responses: {
+        200: {
+          description: 'List of cocktail photos',
+          content: { 'application/json': { schema: resolver(CocktailPhotoSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
@@ -135,9 +197,20 @@ extrasRoute
   )
   .post(
     '/:cocktailId/photos',
+    describeRoute({
+      tags: ['Cocktail Photos'],
+      summary: 'Add cocktail photo',
+      responses: {
+        201: {
+          description: 'Cocktail photo added',
+          content: { 'application/json': { schema: resolver(CocktailPhotoSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ cocktailId: 'string' })),
-    sValidator(
+    validator('param', type({ cocktailId: 'string' })),
+    validator(
       'json',
       type({
         url: 'string.url',
@@ -165,8 +238,19 @@ extrasRoute
   )
   .delete(
     '/photos/:id',
+    describeRoute({
+      tags: ['Cocktail Photos'],
+      summary: 'Delete cocktail photo',
+      responses: {
+        200: {
+          description: 'Deleted cocktail photo',
+          content: { 'application/json': { schema: resolver(CocktailPhotoSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -184,7 +268,18 @@ extrasRoute
 
   .get(
     '/:cocktailId/steps',
-    sValidator('param', type({ cocktailId: 'string' })),
+    describeRoute({
+      tags: ['Preparation Steps'],
+      summary: 'List preparation steps',
+      responses: {
+        200: {
+          description: 'List of preparation steps',
+          content: { 'application/json': { schema: resolver(PreparationStepSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
@@ -199,9 +294,20 @@ extrasRoute
   )
   .post(
     '/:cocktailId/steps',
+    describeRoute({
+      tags: ['Preparation Steps'],
+      summary: 'Add preparation step',
+      responses: {
+        201: {
+          description: 'Preparation step added',
+          content: { 'application/json': { schema: resolver(PreparationStepSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ cocktailId: 'string' })),
-    sValidator(
+    validator('param', type({ cocktailId: 'string' })),
+    validator(
       'json',
       type({
         stepNumber: 'number',
@@ -229,9 +335,20 @@ extrasRoute
   )
   .put(
     '/steps/:id',
+    describeRoute({
+      tags: ['Preparation Steps'],
+      summary: 'Update preparation step',
+      responses: {
+        200: {
+          description: 'Updated preparation step',
+          content: { 'application/json': { schema: resolver(PreparationStepSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         stepNumber: 'number?',
@@ -258,8 +375,19 @@ extrasRoute
   )
   .delete(
     '/steps/:id',
+    describeRoute({
+      tags: ['Preparation Steps'],
+      summary: 'Delete preparation step',
+      responses: {
+        200: {
+          description: 'Deleted preparation step',
+          content: { 'application/json': { schema: resolver(PreparationStepSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
@@ -277,7 +405,18 @@ extrasRoute
 
   .get(
     '/:cocktailId/style-links',
-    sValidator('param', type({ cocktailId: 'string' })),
+    describeRoute({
+      tags: ['Cocktail Style Links'],
+      summary: 'List cocktail style links',
+      responses: {
+        200: {
+          description: 'List of cocktail style links',
+          content: { 'application/json': { schema: resolver(CocktailStyleJunctionSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
@@ -292,9 +431,20 @@ extrasRoute
   )
   .post(
     '/:cocktailId/style-links',
+    describeRoute({
+      tags: ['Cocktail Style Links'],
+      summary: 'Link style to cocktail',
+      responses: {
+        201: {
+          description: 'Style linked to cocktail',
+          content: { 'application/json': { schema: resolver(CocktailStyleJunctionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ cocktailId: 'string' })),
-    sValidator(
+    validator('param', type({ cocktailId: 'string' })),
+    validator(
       'json',
       type({
         styleId: 'string',
@@ -318,8 +468,19 @@ extrasRoute
   )
   .delete(
     '/style-links/:id',
+    describeRoute({
+      tags: ['Cocktail Style Links'],
+      summary: 'Unlink style from cocktail',
+      responses: {
+        200: {
+          description: 'Style unlinked from cocktail',
+          content: { 'application/json': { schema: resolver(CocktailStyleJunctionSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')

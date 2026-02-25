@@ -1,9 +1,17 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
+import { describeRoute, resolver, validator } from 'hono-openapi'
 import { env } from 'hono/adapter'
 import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
+import {
+  CocktailVoteSchema,
+  CocktailVotePaginatedSchema,
+  CocktailViewSchema,
+  CocktailViewPaginatedSchema,
+  CocktailOfMonthSchema,
+} from 'src/features/cocktails/cocktails.dto'
 import {
   listCocktailVotes,
   voteCocktail,
@@ -24,8 +32,19 @@ const analyticsRoute = new HonoVar()
 analyticsRoute
   .get(
     '/:cocktailId/votes',
-    sValidator('param', type({ cocktailId: 'string' })),
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Cocktail Votes'],
+      summary: 'List cocktail votes',
+      responses: {
+        200: {
+          description: 'Paginated list of cocktail votes',
+          content: { 'application/json': { schema: resolver(CocktailVotePaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ cocktailId: 'string' })),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
@@ -42,9 +61,20 @@ analyticsRoute
   )
   .post(
     '/:cocktailId/votes',
+    describeRoute({
+      tags: ['Cocktail Votes'],
+      summary: 'Vote on cocktail',
+      responses: {
+        200: {
+          description: 'Cocktail vote recorded',
+          content: { 'application/json': { schema: resolver(CocktailVoteSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ cocktailId: 'string' })),
-    sValidator(
+    validator('param', type({ cocktailId: 'string' })),
+    validator(
       'json',
       type({
         voteType: "'upvote'|'downvote'",
@@ -64,27 +94,54 @@ analyticsRoute
       )
     }
   )
-  .delete('/votes/:id', isAuth(), sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
-    const payload = ctx.get('userPayload')
+  .delete(
+    '/votes/:id',
+    describeRoute({
+      tags: ['Cocktail Votes'],
+      summary: 'Delete cocktail vote',
+      responses: {
+        200: {
+          description: 'Deleted cocktail vote',
+          content: { 'application/json': { schema: resolver(CocktailVoteSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    isAuth(),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
+      const payload = ctx.get('userPayload')
 
-    const result = await deleteCocktailVote(db, id, payload.sub.id)
+      const result = await deleteCocktailVote(db, id, payload.sub.id)
 
-    return result.match(
-      (vote) => ctx.json(vote, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (vote) => ctx.json(vote, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
 
 // --- Views ---
 
 analyticsRoute
   .get(
     '/:cocktailId/views',
+    describeRoute({
+      tags: ['Cocktail Views'],
+      summary: 'List cocktail views',
+      responses: {
+        200: {
+          description: 'Paginated list of cocktail views',
+          content: { 'application/json': { schema: resolver(CocktailViewPaginatedSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator('param', type({ cocktailId: 'string' })),
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    validator('param', type({ cocktailId: 'string' })),
+    validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
@@ -101,7 +158,18 @@ analyticsRoute
   )
   .post(
     '/:cocktailId/views',
-    sValidator('param', type({ cocktailId: 'string' })),
+    describeRoute({
+      tags: ['Cocktail Views'],
+      summary: 'Record cocktail view',
+      responses: {
+        201: {
+          description: 'Cocktail view recorded',
+          content: { 'application/json': { schema: resolver(CocktailViewSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
@@ -133,7 +201,18 @@ analyticsRoute
 analyticsRoute
   .get(
     '/of-month',
-    sValidator(
+    describeRoute({
+      tags: ['Cocktail of the Month'],
+      summary: 'List cocktails of the month',
+      responses: {
+        200: {
+          description: 'List of cocktails of the month',
+          content: { 'application/json': { schema: resolver(CocktailOfMonthSchema.array()) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator(
       'query',
       type({ year: 'string.numeric.parse', month: 'string.numeric.parse' })
     ),
@@ -149,21 +228,47 @@ analyticsRoute
       )
     }
   )
-  .get('/of-month/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .get(
+    '/of-month/:id',
+    describeRoute({
+      tags: ['Cocktail of the Month'],
+      summary: 'Get cocktail of the month by ID',
+      responses: {
+        200: {
+          description: 'Cocktail of the month entry',
+          content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
 
-    const result = await getCocktailOfMonthById(db, id)
+      const result = await getCocktailOfMonthById(db, id)
 
-    return result.match(
-      (entry) => ctx.json(entry, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (entry) => ctx.json(entry, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
   .post(
     '/of-month',
+    describeRoute({
+      tags: ['Cocktail of the Month'],
+      summary: 'Create cocktail of the month',
+      responses: {
+        201: {
+          description: 'Cocktail of the month created',
+          content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator(
+    validator(
       'json',
       type({
         cocktailId: 'string',
@@ -191,9 +296,20 @@ analyticsRoute
   )
   .put(
     '/of-month/:id',
+    describeRoute({
+      tags: ['Cocktail of the Month'],
+      summary: 'Update cocktail of the month',
+      responses: {
+        200: {
+          description: 'Updated cocktail of the month',
+          content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
     isAuth('admin'),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         'cocktailId?': 'string',
@@ -220,16 +336,32 @@ analyticsRoute
       )
     }
   )
-  .delete('/of-month/:id', isAuth('admin'), sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .delete(
+    '/of-month/:id',
+    describeRoute({
+      tags: ['Cocktail of the Month'],
+      summary: 'Delete cocktail of the month',
+      responses: {
+        200: {
+          description: 'Deleted cocktail of the month',
+          content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
+        },
+        ...errorResponses,
+      },
+    }),
+    isAuth('admin'),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { id } = ctx.req.valid('param')
 
-    const result = await deleteCocktailOfMonth(db, id)
+      const result = await deleteCocktailOfMonth(db, id)
 
-    return result.match(
-      (entry) => ctx.json(entry, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result.match(
+        (entry) => ctx.json(entry, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
 
 export default analyticsRoute
