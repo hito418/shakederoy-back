@@ -1,3 +1,4 @@
+import "./config/arktype"
 import { serve } from '@hono/node-server'
 import { env } from 'hono/adapter'
 import { cors } from 'hono/cors'
@@ -11,13 +12,7 @@ import usersRoute from './routes/users'
 import barsRoute from './routes/bars'
 import partiesRoute from './routes/parties'
 import { openAPIRouteHandler } from 'hono-openapi'
-// import seedDb from './lib/seed'
-
-if (process?.env?.NODE_ENV === 'DEV') {
-  try {
-    // await seedDb()
-  } catch {}
-}
+import { Scalar } from "@scalar/hono-api-reference"
 
 const app = new HonoVar()
   .use(async (ctx, next) => {
@@ -42,7 +37,6 @@ const app = new HonoVar()
 app.get(
   "/openapi.json",
   openAPIRouteHandler(app, {
-    includeEmptyPaths: true,
     documentation: {
       info: {
         title: "ShakeDeRoy",
@@ -51,6 +45,12 @@ app.get(
       },
     },
   }),
+).get(
+  "/docs",
+  Scalar({
+    theme: "saturn",
+    url: "/openapi.json",
+  })
 );
 
 if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
