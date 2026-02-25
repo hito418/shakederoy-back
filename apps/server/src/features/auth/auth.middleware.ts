@@ -2,7 +2,7 @@ import type { User } from '@repo/schemas/users'
 import { env } from 'hono/adapter'
 import { getSignedCookie } from 'hono/cookie'
 import { type HonoVarMiddleware } from 'src/shared/hono'
-import { validateSession, type SessionPayload } from './session-service'
+import { validateSession, type SessionPayload } from './session.service'
 
 export const isAuth: (
   ...roleList: (User["role"])[]

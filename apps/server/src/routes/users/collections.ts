@@ -3,8 +3,8 @@ import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { getSignedCookie } from 'hono/cookie'
 import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/middleware'
-import { validateSession } from 'src/features/auth/session-service'
+import { isAuth } from 'src/features/auth/auth.middleware'
+import { validateSession } from 'src/features/auth/session.service'
 import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listCollections,
@@ -16,7 +16,7 @@ import {
   listCollectionCocktails,
   addCocktailToCollection,
   removeCocktailFromCollection,
-} from 'src/features/users/collections/service'
+} from 'src/features/users/collections.service'
 
 const collectionsRoute = new HonoVar().basePath('/collections')
 

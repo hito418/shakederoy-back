@@ -1,7 +1,7 @@
 import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/middleware'
+import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listCocktailIngredients,
@@ -18,7 +18,7 @@ import {
   listCocktailStyleLinks,
   addCocktailStyle,
   removeCocktailStyle,
-} from 'src/features/cocktails/extras/service'
+} from 'src/features/cocktails/extras.service'
 
 const extrasRoute = new HonoVar()
 

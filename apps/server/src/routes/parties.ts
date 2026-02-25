@@ -2,7 +2,7 @@ import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/middleware'
+import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listPartySessions,
@@ -22,7 +22,7 @@ import {
   createPartySelection,
   updatePartySelection,
   deletePartySelection,
-} from 'src/features/parties/service'
+} from 'src/features/parties/parties.service'
 
 const partiesRoute = new HonoVar().basePath('/parties')
 

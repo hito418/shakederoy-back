@@ -2,7 +2,7 @@ import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/middleware'
+import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listCocktails,
@@ -10,7 +10,7 @@ import {
   createCocktail,
   updateCocktail,
   deleteCocktail,
-} from 'src/features/cocktails/service'
+} from 'src/features/cocktails/cocktails.service'
 import stylesRoute from './styles'
 import extrasRoute from './extras'
 import analyticsRoute from './analytics'

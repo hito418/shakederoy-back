@@ -2,7 +2,7 @@ import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/middleware'
+import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listBars,
@@ -18,7 +18,7 @@ import {
   deleteBarSignatureCocktail,
   listBarLikes,
   toggleBarLike,
-} from 'src/features/bars/service'
+} from 'src/features/bars/bars.service'
 import reviewsRoute from './reviews'
 
 const barsRoute = new HonoVar().basePath('/bars')

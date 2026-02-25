@@ -3,8 +3,8 @@ import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { deleteCookie, getSignedCookie } from 'hono/cookie'
 import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/middleware'
-import { deleteSession } from 'src/features/auth/session-service'
+import { isAuth } from 'src/features/auth/auth.middleware'
+import { deleteSession } from 'src/features/auth/session.service'
 import { errorToHttpStatus } from 'src/shared/errors'
 import {
   listUsers,
@@ -12,7 +12,7 @@ import {
   createUser,
   updateUser,
   deleteUser,
-} from 'src/features/users/service'
+} from 'src/features/users/users.service'
 import favoritesRoute from './favorites'
 import collectionsRoute from './collections'
 
