@@ -5,8 +5,10 @@ import { type HonoVarMiddleware } from 'src/shared/hono'
 import { validateSession, type SessionPayload } from './session.service'
 
 export const isAuth: (
-  ...roleList: (User["role"])[]
-) => HonoVarMiddleware<{ userPayload: SessionPayload }> = function (...roleList) {
+  ...roleList: User['role'][]
+) => HonoVarMiddleware<{ userPayload: SessionPayload }> = function (
+  ...roleList
+) {
   return async (ctx, next) => {
     const { COOKIE_SECRET } = env(ctx)
     const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
@@ -24,10 +26,7 @@ export const isAuth: (
 
     const payload = result.value
 
-    if (
-      roleList.length > 0 &&
-      !roleList.includes(payload.role)
-    ) {
+    if (roleList.length > 0 && !roleList.includes(payload.role)) {
       return ctx.json({ message: 'Unauthorized' }, 401)
     }
 

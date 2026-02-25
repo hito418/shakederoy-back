@@ -25,21 +25,59 @@ type DB = Kysely<Database>
 
 // --- Bars ---
 
+type BarJoint = Bar & {
+  owner_username: string | null
+  photo_url: string | null
+  photo_alt_text: string | null
+  likes_count: string | number | bigint
+  average_rating: string | number
+}
+
 export function listBars(
   db: DB,
   page: number,
   pageSize: number
-): ResultAsync<PaginatedResult<Bar>, AppError> {
+): ResultAsync<PaginatedResult<BarJoint>, AppError> {
   return dbQueryPaginated(
     db,
-    (trx) => trx.selectFrom('bars').select((eb) => eb.fn.countAll().as('count')).execute(),
     (trx) =>
       trx
         .selectFrom('bars')
-        .selectAll()
+        .select((eb) => eb.fn.countAll().as('count'))
+        .execute(),
+    (trx) =>
+      trx
+        .selectFrom('bars')
+        .leftJoin('bar_likes', 'bars.id', 'bar_likes.bar_id')
+        .leftJoin('bar_reviews', 'bars.id', 'bar_reviews.bar_id')
+        .leftJoinLateral(
+          (eb) =>
+            eb
+              .selectFrom('bar_photos')
+              .select(['url', 'alt_text', 'bar_id'])
+              .whereRef('bar_photos.bar_id', '=', 'bars.id')
+              .limit(1)
+              .as('primary_photo'),
+          (join) => join.onTrue()
+        )
+        .leftJoin('users', 'bars.owner_id', 'users.id')
+        .selectAll('bars')
+        .select([
+          'users.username as owner_username',
+          'primary_photo.url as photo_url',
+          'primary_photo.alt_text as photo_alt_text',
+          (eb) => eb.fn.count('bar_likes.id').as('likes_count'),
+          (eb) => eb.fn.avg('bar_reviews.rating').as('average_rating'),
+        ])
         .limit(pageSize)
         .offset((page - 1) * pageSize)
         .orderBy('updated_at', 'desc')
+        .groupBy('bars.id')
+        .groupBy('users.id')
+        .groupBy('primary_photo.url')
+        .groupBy('primary_photo.alt_text')
+        .groupBy('bar_reviews.id')
+        .groupBy('bar_likes.id')
         .execute(),
     page,
     pageSize
@@ -49,19 +87,12 @@ export function listBars(
 export function getBarById(db: DB, id: string): ResultAsync<Bar, AppError> {
   return dbQueryFirst(
     () =>
-      db
-        .selectFrom('bars')
-        .selectAll()
-        .where('id', '=', id)
-        .executeTakeFirst(),
+      db.selectFrom('bars').selectAll().where('id', '=', id).executeTakeFirst(),
     Errors.notFound('Bar')
   )
 }
 
-export function createBar(
-  db: DB,
-  data: BarInsert
-): ResultAsync<Bar, AppError> {
+export function createBar(db: DB, data: BarInsert): ResultAsync<Bar, AppError> {
   return dbInsert(
     () =>
       db
@@ -106,7 +137,11 @@ export function updateBar(
   )
 }
 
-export function deleteBar(db: DB, id: string, userId: string): ResultAsync<Bar, AppError> {
+export function deleteBar(
+  db: DB,
+  id: string,
+  userId: string
+): ResultAsync<Bar, AppError> {
   return dbDelete(
     () =>
       db
@@ -174,7 +209,11 @@ export function deleteBarPhoto(
       db
         .deleteFrom('bar_photos')
         .where('id', '=', id)
-        .where('bar_id', 'in', db.selectFrom('bars').select('id').where('owner_id', '=', userId))
+        .where(
+          'bar_id',
+          'in',
+          db.selectFrom('bars').select('id').where('owner_id', '=', userId)
+        )
         .returningAll()
         .executeTakeFirst(),
     Errors.notFound('Bar photo')
@@ -237,7 +276,11 @@ export function deleteBarSignatureCocktail(
       db
         .deleteFrom('bar_signature_cocktails')
         .where('id', '=', id)
-        .where('bar_id', 'in', db.selectFrom('bars').select('id').where('owner_id', '=', userId))
+        .where(
+          'bar_id',
+          'in',
+          db.selectFrom('bars').select('id').where('owner_id', '=', userId)
+        )
         .returningAll()
         .executeTakeFirst(),
     Errors.notFound('Bar signature cocktail')
@@ -288,10 +331,7 @@ export function toggleBarLike(
       .executeTakeFirst()
 
     if (existing) {
-      await trx
-        .deleteFrom('bar_likes')
-        .where('id', '=', existing.id)
-        .execute()
+      await trx.deleteFrom('bar_likes').where('id', '=', existing.id).execute()
       return { liked: false }
     }
 
