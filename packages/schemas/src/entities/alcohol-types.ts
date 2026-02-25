@@ -7,7 +7,9 @@ export const alcoholTypes = pgTable('alcohol_types', {
   id: uuid('id').defaultRandom().primaryKey(),
   name: text('name').unique().notNull(),
   description: text('description'),
+  /** Minimum ABV (Alcohol By Volume) percentage typical for this type */
   abvRangeMin: text('abv_range_min'),
+  /** Maximum ABV (Alcohol By Volume) percentage typical for this type */
   abvRangeMax: text('abv_range_max'),
   ...timestamps,
 })
