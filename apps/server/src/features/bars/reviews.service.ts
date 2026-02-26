@@ -4,6 +4,7 @@ import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
+import { snakeToCamel, snakeToCamelArray } from 'src/shared/case'
 
 type DB = Kysely<Database>
 
@@ -12,7 +13,7 @@ export function listBarReviews(
   barId: string,
   page: number,
   pageSize: number
-): ResultAsync<PaginatedResult<BarReview>, AppError> {
+) {
   return dbQueryPaginated(
     db,
     (trx) =>
@@ -32,10 +33,16 @@ export function listBarReviews(
         .execute(),
     page,
     pageSize
-  )
+  ).map((result) => ({
+    ...result,
+    data: snakeToCamelArray(result.data as Record<string, unknown>[]),
+  }))
 }
 
-export function getBarReviewById(db: DB, id: string): ResultAsync<BarReview, AppError> {
+export function getBarReviewById(
+  db: DB,
+  id: string
+): ResultAsync<Record<string, unknown>, AppError> {
   return dbQueryFirst(
     () =>
       db
@@ -44,13 +51,13 @@ export function getBarReviewById(db: DB, id: string): ResultAsync<BarReview, App
         .where('id', '=', id)
         .executeTakeFirst(),
     Errors.notFound('Bar review')
-  )
+  ).map((row) => snakeToCamel(row as Record<string, unknown>))
 }
 
 export function createBarReview(
   db: DB,
   data: BarReviewInsert
-): ResultAsync<BarReview, AppError> {
+): ResultAsync<Record<string, unknown>, AppError> {
   return dbInsert(
     () =>
       db
@@ -64,7 +71,7 @@ export function createBarReview(
         .returningAll()
         .executeTakeFirst(),
     'Failed to create bar review'
-  )
+  ).map((row) => snakeToCamel(row as Record<string, unknown>))
 }
 
 export function updateBarReview(
@@ -72,7 +79,7 @@ export function updateBarReview(
   id: string,
   userId: string,
   data: BarReviewUpdate
-): ResultAsync<BarReview, AppError> {
+): ResultAsync<Record<string, unknown>, AppError> {
   return dbUpdate(
     () =>
       db
@@ -83,10 +90,14 @@ export function updateBarReview(
         .returningAll()
         .executeTakeFirst(),
     Errors.notFound('Bar review')
-  )
+  ).map((row) => snakeToCamel(row as Record<string, unknown>))
 }
 
-export function deleteBarReview(db: DB, id: string, userId: string): ResultAsync<BarReview, AppError> {
+export function deleteBarReview(
+  db: DB,
+  id: string,
+  userId: string
+): ResultAsync<Record<string, unknown>, AppError> {
   return dbDelete(
     () =>
       db
@@ -96,5 +107,5 @@ export function deleteBarReview(db: DB, id: string, userId: string): ResultAsync
         .returningAll()
         .executeTakeFirst(),
     Errors.notFound('Bar review')
-  )
+  ).map((row) => snakeToCamel(row as Record<string, unknown>))
 }

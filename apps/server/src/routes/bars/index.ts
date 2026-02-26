@@ -1,36 +1,37 @@
 import { type } from 'arktype'
-import { env } from 'hono/adapter'
+import { Hono } from 'hono'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/auth.middleware'
-import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { env } from 'hono/adapter'
+import { isAuth, optionalAuth } from 'src/features/auth/auth.middleware'
 import {
-  BarSchema,
-  BarPaginatedSchema,
-  BarPhotoSchema,
-  BarSignatureCocktailSchema,
+  BarDetailSchema,
   BarLikePaginatedSchema,
   BarLikeToggleSchema,
+  BarListPaginatedSchema,
+  BarListQuerySchema,
+  BarPhotoSchema,
+  BarSignatureCocktailSchema,
 } from 'src/features/bars/bars.dto'
 import {
-  listBars,
-  getBarById,
   createBar,
-  updateBar,
-  deleteBar,
-  listBarPhotos,
   createBarPhoto,
-  deleteBarPhoto,
-  listBarSignatureCocktails,
   createBarSignatureCocktail,
+  deleteBar,
+  deleteBarPhoto,
   deleteBarSignatureCocktail,
+  getBarByIdOrSlug,
   listBarLikes,
+  listBarPhotos,
+  listBars,
+  listBarSignatureCocktails,
   toggleBarLike,
+  updateBar,
 } from 'src/features/bars/bars.service'
+import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
 import reviewsRoute from './reviews'
 
-const barsRoute = new HonoVar().basePath('/bars')
+const barsRoute = new Hono().basePath('/bars')
 
 // --- Bars CRUD ---
 
@@ -43,60 +44,74 @@ barsRoute
       responses: {
         200: {
           description: 'Paginated list of bars',
-          content: { 'application/json': { schema: resolver(BarPaginatedSchema) } },
+          content: {
+            'application/json': { schema: resolver(BarListPaginatedSchema) },
+          },
         },
         ...errorResponses,
       },
     }),
-    validator('query', type({ page: 'string.numeric.parse?' })),
+    validator('query', BarListQuerySchema),
     async (ctx) => {
       const db = ctx.get('database')
-      const { page = 1 } = ctx.req.valid('query')
+      const { page = 1, city, style, search } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listBars(db, page, pageSize)
+      const result = await listBars(db, page, pageSize, { city, style, search })
 
       return result.match(
         (bars) => ctx.json(bars, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
   .get(
-    '/:id',
+    '/:idOrSlug',
     describeRoute({
       tags: ['Bars'],
-      summary: 'Get bar by ID',
+      summary: 'Get bar by ID or slug',
       responses: {
         200: {
           description: 'Bar details',
-          content: { 'application/json': { schema: resolver(BarSchema) } },
+          content: {
+            'application/json': { schema: resolver(BarDetailSchema) },
+          },
         },
         ...errorResponses,
       },
     }),
-    validator('param', type({ id: 'string' })),
+    optionalAuth(),
+    validator('param', type({ idOrSlug: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
-      const { id } = ctx.req.valid('param')
+      const { idOrSlug } = ctx.req.valid('param')
+      const payload = ctx.get('userPayload')
 
-      const result = await getBarById(db, id)
+      const result = await getBarByIdOrSlug(
+        db,
+        idOrSlug,
+        payload?.sub.id ?? null
+      )
 
       return result.match(
         (bar) => ctx.json(bar, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
   .post(
-    '/create',
+    '/',
     describeRoute({
       tags: ['Bars'],
       summary: 'Create bar',
       responses: {
         201: {
           description: 'Created bar',
-          content: { 'application/json': { schema: resolver(BarSchema) } },
+          content: {
+            'application/json': { schema: resolver(BarDetailSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -116,7 +131,13 @@ barsRoute
         'longitude?': 'number',
         'phone?': 'string',
         'website?': 'string',
-        'style?': "'classic' | 'speakeasy' | 'tiki' | 'rooftop' | 'dive' | 'wine_bar' | 'cocktail_lounge' | 'sports_bar' | 'brewpub' | 'other'",
+        'style?':
+          "'classic' | 'speakeasy' | 'tiki' | 'rooftop' | 'dive' | 'wine_bar' | 'cocktail_lounge' | 'sports_bar' | 'brewpub' | 'other'",
+        'photos?': type({
+          url: 'string >= 1',
+          'altText?': 'string',
+          'isPrimary?': 'boolean',
+        }).array(),
       })
     ),
     async (ctx) => {
@@ -124,25 +145,30 @@ barsRoute
       const payload = ctx.get('userPayload')
       const data = ctx.req.valid('json')
 
-      const result = await createBar(db, {
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        address: data.address,
-        city: data.city,
-        postal_code: data.postalCode,
-        country: data.country,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        phone: data.phone,
-        website: data.website,
-        style: data.style,
-        owner_id: payload.sub.id,
-      })
+      const result = await createBar(
+        db,
+        {
+          name: data.name,
+          slug: data.slug,
+          description: data.description,
+          address: data.address,
+          city: data.city,
+          postal_code: data.postalCode,
+          country: data.country,
+          latitude: data.latitude,
+          longitude: data.longitude,
+          phone: data.phone,
+          website: data.website,
+          style: data.style,
+          owner_id: payload.sub.id,
+        },
+        data.photos
+      )
 
       return result.match(
         (bar) => ctx.json(bar, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -154,7 +180,9 @@ barsRoute
       responses: {
         200: {
           description: 'Updated bar',
-          content: { 'application/json': { schema: resolver(BarSchema) } },
+          content: {
+            'application/json': { schema: resolver(BarDetailSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -175,7 +203,8 @@ barsRoute
         'longitude?': 'number',
         'phone?': 'string',
         'website?': 'string',
-        'style?': "'classic' | 'speakeasy' | 'tiki' | 'rooftop' | 'dive' | 'wine_bar' | 'cocktail_lounge' | 'sports_bar' | 'brewpub' | 'other'",
+        'style?':
+          "'classic' | 'speakeasy' | 'tiki' | 'rooftop' | 'dive' | 'wine_bar' | 'cocktail_lounge' | 'sports_bar' | 'brewpub' | 'other'",
       })
     ),
     async (ctx) => {
@@ -201,7 +230,8 @@ barsRoute
 
       return result.match(
         (bar) => ctx.json(bar, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -209,11 +239,13 @@ barsRoute
     '/:id',
     describeRoute({
       tags: ['Bars'],
-      summary: 'Delete bar',
+      summary: 'Delete bar (soft)',
       responses: {
         200: {
-          description: 'Deleted bar',
-          content: { 'application/json': { schema: resolver(BarSchema) } },
+          description: 'Soft-deleted bar',
+          content: {
+            'application/json': { schema: resolver(BarDetailSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -229,7 +261,8 @@ barsRoute
 
       return result.match(
         (bar) => ctx.json(bar, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -245,7 +278,9 @@ barsRoute
       responses: {
         200: {
           description: 'List of bar photos',
-          content: { 'application/json': { schema: resolver(BarPhotoSchema.array()) } },
+          content: {
+            'application/json': { schema: resolver(BarPhotoSchema.array()) },
+          },
         },
         ...errorResponses,
       },
@@ -259,7 +294,8 @@ barsRoute
 
       return result.match(
         (photos) => ctx.json(photos, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -293,48 +329,53 @@ barsRoute
 
       const payload = ctx.get('userPayload')
 
-      const result = await createBarPhoto(db, {
-        bar_id: barId,
-        url: data.url,
-        alt_text: data.altText,
-        is_primary: data.isPrimary,
-      }, payload.sub.id)
+      const result = await createBarPhoto(
+        db,
+        {
+          bar_id: barId,
+          url: data.url,
+          alt_text: data.altText,
+          is_primary: data.isPrimary,
+        },
+        payload.sub.id
+      )
 
       return result.match(
         (photo) => ctx.json(photo, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
-
-barsRoute.delete(
-  '/photos/:id',
-  describeRoute({
-    tags: ['Bar Photos'],
-    summary: 'Delete bar photo',
-    responses: {
-      200: {
-        description: 'Deleted bar photo',
-        content: { 'application/json': { schema: resolver(BarPhotoSchema) } },
+  .delete(
+    '/:barId/photos/:id',
+    describeRoute({
+      tags: ['Bar Photos'],
+      summary: 'Delete bar photo',
+      responses: {
+        200: {
+          description: 'Deleted bar photo',
+          content: { 'application/json': { schema: resolver(BarPhotoSchema) } },
+        },
+        ...errorResponses,
       },
-      ...errorResponses,
-    },
-  }),
-  isAuth(),
-  validator('param', type({ id: 'string' })),
-  async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
-    const payload = ctx.get('userPayload')
+    }),
+    isAuth(),
+    validator('param', type({ barId: 'string', id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { barId, id } = ctx.req.valid('param')
+      const payload = ctx.get('userPayload')
 
-    const result = await deleteBarPhoto(db, id, payload.sub.id)
+      const result = await deleteBarPhoto(db, barId, id, payload.sub.id)
 
-    return result.match(
-      (photo) => ctx.json(photo, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  }
-)
+      return result.match(
+        (photo) => ctx.json(photo, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
 
 // --- Bar Signature Cocktails ---
 
@@ -347,7 +388,11 @@ barsRoute
       responses: {
         200: {
           description: 'List of bar signature cocktails',
-          content: { 'application/json': { schema: resolver(BarSignatureCocktailSchema.array()) } },
+          content: {
+            'application/json': {
+              schema: resolver(BarSignatureCocktailSchema.array()),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -361,7 +406,8 @@ barsRoute
 
       return result.match(
         (cocktails) => ctx.json(cocktails, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -373,7 +419,11 @@ barsRoute
       responses: {
         201: {
           description: 'Created bar signature cocktail',
-          content: { 'application/json': { schema: resolver(BarSignatureCocktailSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(BarSignatureCocktailSchema),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -396,49 +446,63 @@ barsRoute
 
       const payload = ctx.get('userPayload')
 
-      const result = await createBarSignatureCocktail(db, {
-        bar_id: barId,
-        cocktail_id: data.cocktailId,
-        price: data.price,
-        currency: data.currency,
-        is_available: data.isAvailable,
-      }, payload.sub.id)
+      const result = await createBarSignatureCocktail(
+        db,
+        {
+          bar_id: barId,
+          cocktail_id: data.cocktailId,
+          price: data.price,
+          currency: data.currency,
+          is_available: data.isAvailable,
+        },
+        payload.sub.id
+      )
 
       return result.match(
         (cocktail) => ctx.json(cocktail, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
-
-barsRoute.delete(
-  '/signature-cocktails/:id',
-  describeRoute({
-    tags: ['Bar Signature Cocktails'],
-    summary: 'Remove bar signature cocktail',
-    responses: {
-      200: {
-        description: 'Removed bar signature cocktail',
-        content: { 'application/json': { schema: resolver(BarSignatureCocktailSchema) } },
+  .delete(
+    '/:barId/signature-cocktails/:id',
+    describeRoute({
+      tags: ['Bar Signature Cocktails'],
+      summary: 'Remove bar signature cocktail',
+      responses: {
+        200: {
+          description: 'Removed bar signature cocktail',
+          content: {
+            'application/json': {
+              schema: resolver(BarSignatureCocktailSchema),
+            },
+          },
+        },
+        ...errorResponses,
       },
-      ...errorResponses,
-    },
-  }),
-  isAuth(),
-  validator('param', type({ id: 'string' })),
-  async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
-    const payload = ctx.get('userPayload')
+    }),
+    isAuth(),
+    validator('param', type({ barId: 'string', id: 'string' })),
+    async (ctx) => {
+      const db = ctx.get('database')
+      const { barId, id } = ctx.req.valid('param')
+      const payload = ctx.get('userPayload')
 
-    const result = await deleteBarSignatureCocktail(db, id, payload.sub.id)
+      const result = await deleteBarSignatureCocktail(
+        db,
+        barId,
+        id,
+        payload.sub.id
+      )
 
-    return result.match(
-      (cocktail) => ctx.json(cocktail, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  }
-)
+      return result.match(
+        (cocktail) => ctx.json(cocktail, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+    }
+  )
 
 // --- Bar Likes ---
 
@@ -451,7 +515,9 @@ barsRoute
       responses: {
         200: {
           description: 'Paginated list of bar likes',
-          content: { 'application/json': { schema: resolver(BarLikePaginatedSchema) } },
+          content: {
+            'application/json': { schema: resolver(BarLikePaginatedSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -468,7 +534,8 @@ barsRoute
 
       return result.match(
         (likes) => ctx.json(likes, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -480,7 +547,9 @@ barsRoute
       responses: {
         200: {
           description: 'Like toggle result',
-          content: { 'application/json': { schema: resolver(BarLikeToggleSchema) } },
+          content: {
+            'application/json': { schema: resolver(BarLikeToggleSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -496,7 +565,8 @@ barsRoute
 
       return result.match(
         (toggle) => ctx.json(toggle, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
