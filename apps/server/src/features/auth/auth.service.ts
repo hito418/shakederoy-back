@@ -2,8 +2,8 @@ import bcrypt from 'bcrypt'
 import type { Database } from '@repo/schemas'
 import type { User } from '@repo/schemas/users'
 import type { Kysely } from 'kysely'
-import { ResultAsync, err, ok } from 'neverthrow'
-import { dbInsert, dbQueryFirst, fromPromise } from 'src/shared/db-helpers'
+import { ResultAsync, err, fromPromise, ok } from 'neverthrow'
+import { dbQuery, guard } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -21,10 +21,7 @@ export function initAdmin(
   email: string,
   password: string
 ): ResultAsync<SafeUser, AppError> {
-  return fromPromise(
-    db.selectFrom('users').select('id').limit(1).execute(),
-    () => Errors.databaseError()
-  )
+  return dbQuery(db.selectFrom('users').select('id').limit(1).execute())
     .andThen((userList) => {
       if (userList.length > 0) {
         return err(Errors.alreadyExists('Admin initialization'))
@@ -32,24 +29,26 @@ export function initAdmin(
       return ok(undefined)
     })
     .andThen(() =>
-      fromPromise(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
-    )
-    .andThen((hashedPassword) =>
-      dbInsert(
-        () =>
-          db
-            .insertInto('users')
-            .values({
-              username,
-              email,
-              password: hashedPassword,
-              role: 'admin',
-            })
-            .returningAll()
-            .executeTakeFirst(),
-        'Failed to create admin user'
+      fromPromise(bcrypt.hash(password, 10), () =>
+        Errors.internalError('Failed to hash password')
       )
     )
+    .andThen((hashedPassword) =>
+      dbQuery(
+        db
+          .insertInto('users')
+          .values({
+            username,
+            email,
+            password: hashedPassword,
+            role: 'admin',
+          })
+          .returningAll()
+          .executeTakeFirst(),
+        () => Errors.databaseError('Failed to create admin user')
+      )
+    )
+    .andThen(guard(Errors.databaseError('Failed to create admin user')))
     .map(({ password: _, ...safeUser }) => safeUser)
 }
 
@@ -59,22 +58,24 @@ export function registerUser(
   email: string,
   password: string
 ): ResultAsync<UserCredentials, AppError> {
-  return fromPromise(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
+  return fromPromise(bcrypt.hash(password, 10), () =>
+    Errors.internalError('Failed to hash password')
+  )
     .andThen((hashedPassword) =>
-      dbInsert(
-        () =>
-          db
-            .insertInto('users')
-            .values({
-              username,
-              email,
-              password: hashedPassword,
-            })
-            .returningAll()
-            .executeTakeFirst(),
-        'Failed to register user'
+      dbQuery(
+        db
+          .insertInto('users')
+          .values({
+            username,
+            email,
+            password: hashedPassword,
+          })
+          .returningAll()
+          .executeTakeFirst(),
+        () => Errors.databaseError('Failed to register user')
       )
     )
+    .andThen(guard())
     .map((user) => ({
       id: user.id,
       username: user.username,
@@ -87,28 +88,22 @@ export function loginUser(
   credential: string,
   password: string
 ): ResultAsync<UserCredentials, AppError> {
-  return dbQueryFirst(
-    () =>
-      db
-        .selectFrom('users')
-        .selectAll()
-        .where((eb) =>
-          eb.or([
-            eb('email', '=', credential),
-            eb('username', '=', credential),
-          ])
-        )
-        .executeTakeFirst(),
-    Errors.notFound('User')
+  return dbQuery(
+    db
+      .selectFrom('users')
+      .selectAll()
+      .where((eb) =>
+        eb.or([eb('email', '=', credential), eb('username', '=', credential)])
+      )
+      .executeTakeFirst(),
+    () => Errors.notFound('User')
   )
+    .andThen(guard(Errors.notFound('User')))
     .andThen((user) =>
-      fromPromise(
-        bcrypt.compare(password, user.password),
-        () => Errors.internalError('Password verification failed')
+      fromPromise(bcrypt.compare(password, user.password), () =>
+        Errors.internalError('Password verification failed')
       ).andThen((isMatch) =>
-        isMatch
-          ? ok(user)
-          : err(Errors.invalidCredentials('Wrong password'))
+        isMatch ? ok(user) : err(Errors.invalidCredentials('Wrong password'))
       )
     )
     .map((user) => ({
