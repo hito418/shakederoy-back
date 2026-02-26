@@ -1,13 +1,8 @@
-import { Hono, MiddlewareHandler } from 'hono'
-import { db } from './db'
+import { Database } from '@repo/schemas'
+import { Kysely } from 'kysely'
 
-export const HonoVar = Hono<{
-  Variables: { database: typeof db }
-  Bindings: typeof process.env
-}>
-
-export type HonoVarMiddleware<T extends { [K: string]: unknown }> =
-  MiddlewareHandler<{
-    Variables: { database: typeof db } & T
-    Bindings: typeof process.env
-  }>
+declare module 'hono' {
+  export interface ContextVariableMap {
+    database: Kysely<Database>
+  }
+}

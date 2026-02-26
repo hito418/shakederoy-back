@@ -2,15 +2,15 @@ import { type } from 'arktype'
 
 const envSchema = type({
   PG_HOST: 'string',
-  PG_PORT: 'string.numeric',
+  PG_PORT: 'string.numeric.parse',
   PG_DB: 'string',
   PG_USER: 'string',
   PG_PASSWORD: 'string',
   COOKIE_SECRET: 'string',
   CORS_ORIGIN: 'string',
-  APP_PORT: 'string.numeric',
-  PAGE_SIZE: type.string.default('15'),
-  NODE_ENV: '"DEV" | "STAGING" | "PROD"',
+  APP_PORT: 'string.numeric.parse = "3000"',
+  PAGE_SIZE: 'string.numeric.parse = "15"',
+  NODE_ENV: '"DEV" | "STAGING" | "PROD" = "DEV"',
 })
 
 const result = envSchema(process.env)
@@ -20,12 +20,4 @@ if (result instanceof type.errors) {
   process.exit(1)
 }
 
-type out = typeof envSchema.inferOut
-
-declare global {
-  namespace NodeJS {
-    interface ProcessEnv extends out {}
-  }
-}
-
-export {}
+export const env = result

@@ -1,27 +1,27 @@
-import "./config/arktype"
 import { serve } from '@hono/node-server'
-import { env } from 'hono/adapter'
+import { Scalar } from '@scalar/hono-api-reference'
+import { Hono } from 'hono'
+import { openAPIRouteHandler } from 'hono-openapi'
 import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
-import { db } from './shared/db'
-import './shared/env'
-import { HonoVar } from './shared/hono'
+import './config/arktype'
 import authRoute from './routes/auth'
-import cocktailsRoute from './routes/cocktails'
-import usersRoute from './routes/users'
 import barsRoute from './routes/bars'
+import cocktailsRoute from './routes/cocktails'
 import partiesRoute from './routes/parties'
-import { openAPIRouteHandler } from 'hono-openapi'
-import { Scalar } from "@scalar/hono-api-reference"
+import usersRoute from './routes/users'
+import { db } from './shared/db'
+import { env } from './shared/env'
+import './shared/hono'
 
-const app = new HonoVar()
+const app = new Hono()
   .use(async (ctx, next) => {
     ctx.set('database', db)
     await next()
   })
   .use(
     cors({
-      origin: (_, ctx) => env(ctx)['CORS_ORIGIN'],
+      origin: env.CORS_ORIGIN.split(','),
       credentials: true,
     })
   )
@@ -33,25 +33,27 @@ const app = new HonoVar()
   .get('/healthcheck', (ctx) => {
     return ctx.json({ status: 'ok' }, 200)
   })
-  
-app.get(
-  "/openapi.json",
-  openAPIRouteHandler(app, {
-    documentation: {
-      info: {
-        title: "ShakeDeRoy",
-        version: "1.0.0",
-        description: "shakederoy API",
+
+app
+  .get(
+    '/openapi.json',
+    openAPIRouteHandler(app, {
+      documentation: {
+        info: {
+          title: 'ShakeDeRoy',
+          version: '1.0.0',
+          description: 'shakederoy API',
+        },
       },
-    },
-  }),
-).get(
-  "/docs",
-  Scalar({
-    theme: "saturn",
-    url: "/openapi.json",
-  })
-);
+    })
+  )
+  .get(
+    '/docs',
+    Scalar({
+      theme: 'saturn',
+      url: '/openapi.json',
+    })
+  )
 
 if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
   showRoutes(app)
@@ -60,7 +62,7 @@ if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
 const server = serve(
   {
     fetch: app.fetch,
-    port: Number(process.env.APP_PORT) || 3000,
+    port: env.APP_PORT,
   },
   (info) => console.log(`Listening on http://localhost:${info.port}`)
 )
