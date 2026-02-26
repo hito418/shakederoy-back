@@ -27,12 +27,13 @@ const err = (description: string): ErrorResponseEntry => ({
   content: { 'application/json': { schema: resolver(ErrorSchema) } },
 })
 
-export const errorResponses: Record<401 | 404 | 409 | 500, ErrorResponseEntry> = {
-  401: err('Unauthorized'),
-  404: err('Not found'),
-  409: err('Already exists'),
-  500: err('Internal server error'),
-}
+export const errorResponses: Record<401 | 404 | 409 | 500, ErrorResponseEntry> =
+  {
+    401: err('Unauthorized'),
+    404: err('Not found'),
+    409: err('Already exists'),
+    500: err('Internal server error'),
+  }
 
 export { strip }
 
@@ -46,4 +47,3 @@ export function paginatedSchema<t>(itemType: type.Any<t>) {
     totalPages: 'number',
   })
 }
-
