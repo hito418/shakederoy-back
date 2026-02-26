@@ -3,7 +3,7 @@ import type { Database } from '@repo/schemas'
 import { User, UserUpdate } from '@repo/schemas/users'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, fromPromise, type PaginatedResult } from 'src/shared/db-helpers'
+import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, dbQuery, type PaginatedResult } from 'src/shared/db-helpers'
 import { Errors, type AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
@@ -61,7 +61,7 @@ export function createUser(
   password: string,
   role: 'admin' | 'user'
 ): ResultAsync<SafeUser, AppError> {
-  return fromPromise(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
+  return dbQuery(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
     .andThen((hashedPassword) =>
       dbInsert(
         () =>
@@ -86,7 +86,7 @@ export function updateUser(
   data: UserUpdate
 ): ResultAsync<SafeUser, AppError> {
   const hashIfNeeded = data.password
-    ? fromPromise(bcrypt.hash(data.password, 10), () => Errors.internalError('Failed to hash password'))
+    ? dbQuery(bcrypt.hash(data.password, 10), () => Errors.internalError('Failed to hash password'))
     : ResultAsync.fromSafePromise<string | undefined, AppError>(Promise.resolve(undefined))
 
   return hashIfNeeded.andThen((hashedPassword) => {

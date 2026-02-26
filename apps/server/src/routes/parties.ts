@@ -1,7 +1,6 @@
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
@@ -31,8 +30,9 @@ import {
   updatePartySelection,
   deletePartySelection,
 } from 'src/features/parties/parties.service'
+import { Hono } from 'hono'
 
-const partiesRoute = new HonoVar().basePath('/parties')
+const partiesRoute = new Hono().basePath('/parties')
 
 // --- Sessions ---
 
@@ -45,7 +45,11 @@ partiesRoute
       responses: {
         200: {
           description: 'Paginated list of party sessions',
-          content: { 'application/json': { schema: resolver(PartySessionPaginatedSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartySessionPaginatedSchema),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -60,7 +64,8 @@ partiesRoute
 
       return result.match(
         (sessions) => ctx.json(sessions, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -72,7 +77,9 @@ partiesRoute
       responses: {
         200: {
           description: 'Party session found',
-          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartySessionSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -86,7 +93,8 @@ partiesRoute
 
       return result.match(
         (session) => ctx.json(session, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -98,7 +106,9 @@ partiesRoute
       responses: {
         200: {
           description: 'Party session found',
-          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartySessionSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -112,7 +122,8 @@ partiesRoute
 
       return result.match(
         (session) => ctx.json(session, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -124,7 +135,9 @@ partiesRoute
       responses: {
         201: {
           description: 'Party session created',
-          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartySessionSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -152,7 +165,8 @@ partiesRoute
 
       return result.match(
         (session) => ctx.json(session, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -164,7 +178,9 @@ partiesRoute
       responses: {
         200: {
           description: 'Party session updated',
-          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartySessionSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -194,7 +210,8 @@ partiesRoute
 
       return result.match(
         (session) => ctx.json(session, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -206,7 +223,9 @@ partiesRoute
       responses: {
         200: {
           description: 'Party session deleted',
-          content: { 'application/json': { schema: resolver(PartySessionSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartySessionSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -223,12 +242,13 @@ partiesRoute
 
       return result.match(
         (session) => ctx.json(session, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
 
-// --- Participants ---
+  // --- Participants ---
 
   .get(
     '/:sessionId/participants',
@@ -238,7 +258,11 @@ partiesRoute
       responses: {
         200: {
           description: 'List of party participants',
-          content: { 'application/json': { schema: resolver(PartyParticipantSchema.array()) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyParticipantSchema.array()),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -252,7 +276,8 @@ partiesRoute
 
       return result.match(
         (participants) => ctx.json(participants, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -264,7 +289,9 @@ partiesRoute
       responses: {
         201: {
           description: 'Party participant added',
-          content: { 'application/json': { schema: resolver(PartyParticipantSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartyParticipantSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -283,7 +310,8 @@ partiesRoute
     async (ctx) => {
       const db = ctx.get('database')
       const { sessionId } = ctx.req.valid('param')
-      const { userId, guestName, prefersAlcoholic, maxIntensity } = ctx.req.valid('json')
+      const { userId, guestName, prefersAlcoholic, maxIntensity } =
+        ctx.req.valid('json')
 
       const result = await createPartyParticipant(db, {
         session_id: sessionId,
@@ -295,7 +323,8 @@ partiesRoute
 
       return result.match(
         (participant) => ctx.json(participant, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -307,7 +336,9 @@ partiesRoute
       responses: {
         200: {
           description: 'Party participant updated',
-          content: { 'application/json': { schema: resolver(PartyParticipantSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartyParticipantSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -325,7 +356,8 @@ partiesRoute
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
-      const { guestName, prefersAlcoholic, maxIntensity } = ctx.req.valid('json')
+      const { guestName, prefersAlcoholic, maxIntensity } =
+        ctx.req.valid('json')
 
       const result = await updatePartyParticipant(db, id, {
         guest_name: guestName,
@@ -335,7 +367,8 @@ partiesRoute
 
       return result.match(
         (participant) => ctx.json(participant, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -347,7 +380,9 @@ partiesRoute
       responses: {
         200: {
           description: 'Party participant removed',
-          content: { 'application/json': { schema: resolver(PartyParticipantSchema) } },
+          content: {
+            'application/json': { schema: resolver(PartyParticipantSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -362,12 +397,13 @@ partiesRoute
 
       return result.match(
         (participant) => ctx.json(participant, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
 
-// --- Participant Styles ---
+  // --- Participant Styles ---
 
   .get(
     '/participants/:participantId/styles',
@@ -377,7 +413,11 @@ partiesRoute
       responses: {
         200: {
           description: 'List of participant styles',
-          content: { 'application/json': { schema: resolver(PartyParticipantStyleSchema.array()) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyParticipantStyleSchema.array()),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -391,7 +431,8 @@ partiesRoute
 
       return result.match(
         (styles) => ctx.json(styles, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -403,7 +444,11 @@ partiesRoute
       responses: {
         201: {
           description: 'Participant style added',
-          content: { 'application/json': { schema: resolver(PartyParticipantStyleSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyParticipantStyleSchema),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -423,7 +468,8 @@ partiesRoute
 
       return result.match(
         (style) => ctx.json(style, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -435,7 +481,11 @@ partiesRoute
       responses: {
         200: {
           description: 'Participant style removed',
-          content: { 'application/json': { schema: resolver(PartyParticipantStyleSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyParticipantStyleSchema),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -450,12 +500,13 @@ partiesRoute
 
       return result.match(
         (style) => ctx.json(style, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
 
-// --- Cocktail Selections ---
+  // --- Cocktail Selections ---
 
   .get(
     '/:sessionId/selections',
@@ -465,7 +516,11 @@ partiesRoute
       responses: {
         200: {
           description: 'List of party selections',
-          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema.array()) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyCocktailSelectionSchema.array()),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -479,7 +534,8 @@ partiesRoute
 
       return result.match(
         (selections) => ctx.json(selections, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -491,7 +547,11 @@ partiesRoute
       responses: {
         201: {
           description: 'Party selection added',
-          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyCocktailSelectionSchema),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -520,7 +580,8 @@ partiesRoute
 
       return result.match(
         (selection) => ctx.json(selection, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -532,7 +593,11 @@ partiesRoute
       responses: {
         200: {
           description: 'Party selection updated',
-          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyCocktailSelectionSchema),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -558,7 +623,8 @@ partiesRoute
 
       return result.match(
         (selection) => ctx.json(selection, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -570,7 +636,11 @@ partiesRoute
       responses: {
         200: {
           description: 'Party selection removed',
-          content: { 'application/json': { schema: resolver(PartyCocktailSelectionSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(PartyCocktailSelectionSchema),
+            },
+          },
         },
         ...errorResponses,
       },
@@ -585,7 +655,8 @@ partiesRoute
 
       return result.match(
         (selection) => ctx.json(selection, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
