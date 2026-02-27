@@ -19,7 +19,7 @@ import {
   deleteBar,
   deleteBarPhoto,
   deleteBarSignatureCocktail,
-  getBarByIdOrSlug,
+  getBarById,
   listBarLikes,
   listBarPhotos,
   listBars,
@@ -67,10 +67,10 @@ barsRoute
     }
   )
   .get(
-    '/:idOrSlug',
+    '/:id',
     describeRoute({
       tags: ['Bars'],
-      summary: 'Get bar by ID or slug',
+      summary: 'Get bar by ID',
       responses: {
         200: {
           description: 'Bar details',
@@ -82,15 +82,15 @@ barsRoute
       },
     }),
     optionalAuth(),
-    validator('param', type({ idOrSlug: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
-      const { idOrSlug } = ctx.req.valid('param')
+      const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await getBarByIdOrSlug(
+      const result = await getBarById(
         db,
-        idOrSlug,
+        id,
         payload?.sub.id ?? null
       )
 
@@ -125,7 +125,7 @@ barsRoute
         'description?': 'string',
         'address?': 'string',
         'city?': 'string',
-        'postalCode?': 'string',
+        'postal_code?': 'string',
         'country?': 'string',
         'latitude?': 'number',
         'longitude?': 'number',
@@ -135,8 +135,8 @@ barsRoute
           "'classic' | 'speakeasy' | 'tiki' | 'rooftop' | 'dive' | 'wine_bar' | 'cocktail_lounge' | 'sports_bar' | 'brewpub' | 'other'",
         'photos?': type({
           url: 'string >= 1',
-          'altText?': 'string',
-          'isPrimary?': 'boolean',
+          'alt_text?': 'string',
+          'is_primary?': 'boolean',
         }).array(),
       })
     ),
@@ -153,7 +153,7 @@ barsRoute
           description: data.description,
           address: data.address,
           city: data.city,
-          postal_code: data.postalCode,
+          postal_code: data.postal_code,
           country: data.country,
           latitude: data.latitude,
           longitude: data.longitude,
@@ -197,7 +197,7 @@ barsRoute
         'description?': 'string',
         'address?': 'string',
         'city?': 'string',
-        'postalCode?': 'string',
+        'postal_code?': 'string',
         'country?': 'string',
         'latitude?': 'number',
         'longitude?': 'number',
@@ -213,20 +213,7 @@ barsRoute
       const payload = ctx.get('userPayload')
       const data = ctx.req.valid('json')
 
-      const result = await updateBar(db, id, payload.sub.id, {
-        name: data.name,
-        slug: data.slug,
-        description: data.description,
-        address: data.address,
-        city: data.city,
-        postal_code: data.postalCode,
-        country: data.country,
-        latitude: data.latitude,
-        longitude: data.longitude,
-        phone: data.phone,
-        website: data.website,
-        style: data.style,
-      })
+      const result = await updateBar(db, id, payload.sub.id, data)
 
       return result.match(
         (bar) => ctx.json(bar, 200),
@@ -318,8 +305,8 @@ barsRoute
       'json',
       type({
         url: 'string >= 1',
-        'altText?': 'string',
-        'isPrimary?': 'boolean',
+        'alt_text?': 'string',
+        'is_primary?': 'boolean',
       })
     ),
     async (ctx) => {
@@ -334,8 +321,8 @@ barsRoute
         {
           bar_id: barId,
           url: data.url,
-          alt_text: data.altText,
-          is_primary: data.isPrimary,
+          alt_text: data.alt_text,
+          is_primary: data.is_primary,
         },
         payload.sub.id
       )
@@ -433,10 +420,10 @@ barsRoute
     validator(
       'json',
       type({
-        cocktailId: 'string >= 1',
+        cocktail_id: 'string >= 1',
         'price?': 'string',
         'currency?': 'string',
-        'isAvailable?': 'boolean',
+        'is_available?': 'boolean',
       })
     ),
     async (ctx) => {
@@ -450,10 +437,10 @@ barsRoute
         db,
         {
           bar_id: barId,
-          cocktail_id: data.cocktailId,
+          cocktail_id: data.cocktail_id,
           price: data.price,
           currency: data.currency,
-          is_available: data.isAvailable,
+          is_available: data.is_available,
         },
         payload.sub.id
       )

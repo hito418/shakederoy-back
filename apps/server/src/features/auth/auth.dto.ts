@@ -15,7 +15,7 @@ export const SafeUserSchema = type({
 
 export const SessionPayloadSchema = type({
   ...strip,
-  sub: { '+': 'delete', id: 'string' },
+  sub: { ...strip, id: 'string' },
   username: 'string',
   role: "'admin' | 'user'",
 })

@@ -6,7 +6,7 @@ import type { PartyCocktailSelection, PartyCocktailSelectionInsert, PartyCocktai
 import type { Kysely } from 'kysely'
 import type { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -50,7 +50,7 @@ export function getPartySessionById(
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst(),
-    Errors.notFound('PartySession')
+    AppError.notFound('PartySession')
   )
 }
 
@@ -65,7 +65,7 @@ export function getPartySessionByCode(
         .selectAll()
         .where('code', '=', code)
         .executeTakeFirst(),
-    Errors.notFound('PartySession')
+    AppError.notFound('PartySession')
   )
 }
 
@@ -106,7 +106,7 @@ export function updatePartySession(
         .where('host_id', '=', hostId)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PartySession')
+    AppError.notFound('PartySession')
   )
 }
 
@@ -123,7 +123,7 @@ export function deletePartySession(
         .where('host_id', '=', hostId)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PartySession')
+    AppError.notFound('PartySession')
   )
 }
 
@@ -177,7 +177,7 @@ export function updatePartyParticipant(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PartyParticipant')
+    AppError.notFound('PartyParticipant')
   )
 }
 
@@ -192,7 +192,7 @@ export function deletePartyParticipant(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PartyParticipant')
+    AppError.notFound('PartyParticipant')
   )
 }
 
@@ -240,7 +240,7 @@ export function removeParticipantStyle(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PartyParticipantStyle')
+    AppError.notFound('PartyParticipantStyle')
   )
 }
 
@@ -293,7 +293,7 @@ export function updatePartySelection(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PartyCocktailSelection')
+    AppError.notFound('PartyCocktailSelection')
   )
 }
 
@@ -308,6 +308,6 @@ export function deletePartySelection(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PartyCocktailSelection')
+    AppError.notFound('PartyCocktailSelection')
   )
 }

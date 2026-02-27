@@ -2,8 +2,8 @@ import { type } from 'arktype'
 import {
   paginatedSchema,
   strip,
-  camelTimestamps,
-  camelTimestampsWithSoftDelete,
+  timestamps,
+  timestampsWithSoftDelete,
 } from 'src/shared/response-schemas'
 
 const barStyleValues = "'classic'|'speakeasy'|'tiki'|'rooftop'|'dive'|'wine_bar'|'cocktail_lounge'|'sports_bar'|'brewpub'|'other'" as const
@@ -13,25 +13,25 @@ const barStyleValues = "'classic'|'speakeasy'|'tiki'|'rooftop'|'dive'|'wine_bar'
 export const BarListItemSchema = type({
   ...strip,
   id: 'string',
-  ownerId: 'string',
+  owner_id: 'string',
   name: 'string',
   slug: 'string',
   'description?': 'string | null',
   'address?': 'string | null',
   'city?': 'string | null',
-  'postalCode?': 'string | null',
+  'postal_code?': 'string | null',
   'country?': 'string | null',
   'latitude?': 'number | null',
   'longitude?': 'number | null',
   'phone?': 'string | null',
   'website?': 'string | null',
   'style?': `${barStyleValues} | null`,
-  ownerUsername: 'string | null',
-  'photoUrl?': 'string | null',
-  'photoAltText?': 'string | null',
-  likesCount: 'number',
-  'averageRating?': 'number | null',
-  ...camelTimestampsWithSoftDelete,
+  owner_username: 'string | null',
+  'photo_url?': 'string | null',
+  'photo_alt_text?': 'string | null',
+  likes_count: 'number',
+  'average_rating?': 'number | null',
+  ...timestampsWithSoftDelete,
 })
 
 export const BarListPaginatedSchema = paginatedSchema(BarListItemSchema)
@@ -41,48 +41,48 @@ export const BarListPaginatedSchema = paginatedSchema(BarListItemSchema)
 export const BarPhotoDetailSchema = type({
   ...strip,
   id: 'string',
-  barId: 'string',
+  bar_id: 'string',
   url: 'string',
-  'altText?': 'string | null',
-  isPrimary: 'boolean',
-  ...camelTimestamps,
+  'alt_text?': 'string | null',
+  is_primary: 'boolean',
+  ...timestamps,
 })
 
 export const BarSignatureCocktailDetailSchema = type({
   ...strip,
   id: 'string',
-  barId: 'string',
-  cocktailId: 'string',
-  'cocktailName?': 'string | null',
+  bar_id: 'string',
+  cocktail_id: 'string',
+  'cocktail_name?': 'string | null',
   'price?': 'string | null',
   'currency?': 'string | null',
-  isAvailable: 'boolean',
-  ...camelTimestamps,
+  is_available: 'boolean',
+  ...timestamps,
 })
 
 export const BarDetailSchema = type({
   ...strip,
   id: 'string',
-  ownerId: 'string',
+  owner_id: 'string',
   name: 'string',
   slug: 'string',
   'description?': 'string | null',
   'address?': 'string | null',
   'city?': 'string | null',
-  'postalCode?': 'string | null',
+  'postal_code?': 'string | null',
   'country?': 'string | null',
   'latitude?': 'number | null',
   'longitude?': 'number | null',
   'phone?': 'string | null',
   'website?': 'string | null',
   'style?': `${barStyleValues} | null`,
-  ownerUsername: 'string | null',
+  owner_username: 'string | null',
   photos: BarPhotoDetailSchema.array(),
-  likesCount: 'number',
-  'averageRating?': 'number | null',
-  signatureCocktails: BarSignatureCocktailDetailSchema.array(),
+  likes_count: 'number',
+  'average_rating?': 'number | null',
+  signature_cocktails: BarSignatureCocktailDetailSchema.array(),
   'liked?': 'boolean | null',
-  ...camelTimestampsWithSoftDelete,
+  ...timestampsWithSoftDelete,
 })
 
 // --- Sub-resource schemas ---
@@ -90,30 +90,30 @@ export const BarDetailSchema = type({
 export const BarPhotoSchema = type({
   ...strip,
   id: 'string',
-  barId: 'string',
+  bar_id: 'string',
   url: 'string',
-  'altText?': 'string | null',
-  isPrimary: 'boolean',
-  ...camelTimestamps,
+  'alt_text?': 'string | null',
+  is_primary: 'boolean',
+  ...timestamps,
 })
 
 export const BarSignatureCocktailSchema = type({
   ...strip,
   id: 'string',
-  barId: 'string',
-  cocktailId: 'string',
+  bar_id: 'string',
+  cocktail_id: 'string',
   'price?': 'string | null',
   'currency?': 'string | null',
-  isAvailable: 'boolean',
-  ...camelTimestamps,
+  is_available: 'boolean',
+  ...timestamps,
 })
 
 export const BarLikeSchema = type({
   ...strip,
   id: 'string',
-  barId: 'string',
-  userId: 'string',
-  ...camelTimestamps,
+  bar_id: 'string',
+  user_id: 'string',
+  ...timestamps,
 })
 
 export const BarLikePaginatedSchema = paginatedSchema(BarLikeSchema)
@@ -123,11 +123,11 @@ export const BarLikeToggleSchema = type({ ...strip, liked: 'boolean' })
 export const BarReviewSchema = type({
   ...strip,
   id: 'string',
-  barId: 'string',
-  userId: 'string',
+  bar_id: 'string',
+  user_id: 'string',
   rating: 'number',
   'comment?': 'string | null',
-  ...camelTimestampsWithSoftDelete,
+  ...timestampsWithSoftDelete,
 })
 
 export const BarReviewPaginatedSchema = paginatedSchema(BarReviewSchema)

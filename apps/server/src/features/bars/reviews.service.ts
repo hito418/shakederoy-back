@@ -1,10 +1,8 @@
 import type { Database } from '@repo/schemas'
-import { BarReview, BarReviewInsert, BarReviewUpdate } from '@repo/schemas/bar-reviews'
+import { BarReviewInsert, BarReviewUpdate } from '@repo/schemas/bar-reviews'
 import type { Kysely } from 'kysely'
-import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
-import { snakeToCamel, snakeToCamelArray } from 'src/shared/case'
+import { cleanUpdate, dbQuery, dbQueryPaginated } from 'src/shared/db-helpers'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -33,45 +31,46 @@ export function listBarReviews(
         .execute(),
     page,
     pageSize
-  ).map((result) => ({
-    ...result,
-    data: snakeToCamelArray(result.data as Record<string, unknown>[]),
-  }))
+  )
 }
 
 export function getBarReviewById(
   db: DB,
   id: string
-): ResultAsync<Record<string, unknown>, AppError> {
-  return dbQueryFirst(
-    () =>
-      db
-        .selectFrom('bar_reviews')
-        .selectAll()
-        .where('id', '=', id)
-        .executeTakeFirst(),
-    Errors.notFound('Bar review')
-  ).map((row) => snakeToCamel(row as Record<string, unknown>))
+) {
+  return dbQuery(
+    db
+      .selectFrom('bar_reviews')
+      .selectAll()
+      .where('id', '=', id)
+      .executeTakeFirst()
+      .then((row) => {
+        if (!row) throw new Error('Bar review not found')
+        return row
+      })
+  )
 }
 
 export function createBarReview(
   db: DB,
   data: BarReviewInsert
-): ResultAsync<Record<string, unknown>, AppError> {
-  return dbInsert(
-    () =>
-      db
-        .insertInto('bar_reviews')
-        .values({
-          bar_id: data.bar_id,
-          user_id: data.user_id,
-          rating: data.rating,
-          comment: data.comment,
-        })
-        .returningAll()
-        .executeTakeFirst(),
-    'Failed to create bar review'
-  ).map((row) => snakeToCamel(row as Record<string, unknown>))
+) {
+  return dbQuery(
+    db
+      .insertInto('bar_reviews')
+      .values({
+        bar_id: data.bar_id,
+        user_id: data.user_id,
+        rating: data.rating,
+        comment: data.comment,
+      })
+      .returningAll()
+      .executeTakeFirst()
+      .then((row) => {
+        if (!row) throw new Error('Failed to create bar review')
+        return row
+      })
+  )
 }
 
 export function updateBarReview(
@@ -79,33 +78,37 @@ export function updateBarReview(
   id: string,
   userId: string,
   data: BarReviewUpdate
-): ResultAsync<Record<string, unknown>, AppError> {
-  return dbUpdate(
-    () =>
-      db
-        .updateTable('bar_reviews')
-        .set(cleanUpdate(data))
-        .where('id', '=', id)
-        .where('user_id', '=', userId)
-        .returningAll()
-        .executeTakeFirst(),
-    Errors.notFound('Bar review')
-  ).map((row) => snakeToCamel(row as Record<string, unknown>))
+) {
+  return dbQuery(
+    db
+      .updateTable('bar_reviews')
+      .set(cleanUpdate(data))
+      .where('id', '=', id)
+      .where('user_id', '=', userId)
+      .returningAll()
+      .executeTakeFirst()
+      .then((row) => {
+        if (!row) throw new Error('Bar review not found')
+        return row
+      })
+  )
 }
 
 export function deleteBarReview(
   db: DB,
   id: string,
   userId: string
-): ResultAsync<Record<string, unknown>, AppError> {
-  return dbDelete(
-    () =>
-      db
-        .deleteFrom('bar_reviews')
-        .where('id', '=', id)
-        .where('user_id', '=', userId)
-        .returningAll()
-        .executeTakeFirst(),
-    Errors.notFound('Bar review')
-  ).map((row) => snakeToCamel(row as Record<string, unknown>))
+) {
+  return dbQuery(
+    db
+      .deleteFrom('bar_reviews')
+      .where('id', '=', id)
+      .where('user_id', '=', userId)
+      .returningAll()
+      .executeTakeFirst()
+      .then((row) => {
+        if (!row) throw new Error('Bar review not found')
+        return row
+      })
+  )
 }

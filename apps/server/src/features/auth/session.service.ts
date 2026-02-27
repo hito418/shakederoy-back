@@ -3,7 +3,7 @@ import type { Kysely } from 'kysely'
 import type { Database } from '@repo/schemas'
 import type { User } from '@repo/schemas/users'
 import { ResultAsync, err, ok } from 'neverthrow'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 import { dbQuery, guard } from 'src/shared/db-helpers'
 
 type DB = Kysely<Database>
@@ -39,7 +39,7 @@ export function createSession(
       })
       .returning(['id', 'user_id', 'expires_at'])
       .executeTakeFirst(),
-    () => Errors.databaseError('Failed to create session')
+    () => AppError.databaseError('Failed to create session')
   ).map(() => ({
     sessionId,
     payload: {
@@ -66,13 +66,13 @@ export function validateSession(
       ])
       .where('sessions.id', '=', sessionId)
       .executeTakeFirst(),
-    () => Errors.unauthorized('Invalid session')
+    () => AppError.unauthorized('Invalid session')
   )
-    .andThen(guard(Errors.databaseError('Failed to validate session')))
+    .andThen(guard(AppError.databaseError('Failed to validate session')))
     .andThen((session) => {
       if (new Date(session.expires_at).valueOf() < Date.now()) {
         return deleteSession(db, sessionId).andThen(() =>
-          err(Errors.unauthorized('Session expired'))
+          err(AppError.unauthorized('Session expired'))
         )
       }
       return ok({
@@ -89,7 +89,7 @@ export function deleteSession(
 ): ResultAsync<void, AppError> {
   return dbQuery(
     db.deleteFrom('sessions').where('id', '=', sessionId).execute(),
-    () => Errors.databaseError('Failed to delete session')
+    () => AppError.databaseError('Failed to delete session')
   ).map(() => undefined)
 }
 
@@ -99,7 +99,7 @@ export function deleteAllUserSessions(
 ): ResultAsync<void, AppError> {
   return dbQuery(
     db.deleteFrom('sessions').where('user_id', '=', userId).execute(),
-    () => Errors.databaseError('Failed to delete user sessions')
+    () => AppError.databaseError('Failed to delete user sessions')
   ).map(() => undefined)
 }
 
@@ -109,6 +109,6 @@ export function cleanupExpiredSessions(db: DB): ResultAsync<number, AppError> {
       .deleteFrom('sessions')
       .where('expires_at', '<', new Date())
       .executeTakeFirst(),
-    () => Errors.databaseError('Failed to cleanup expired sessions')
+    () => AppError.databaseError('Failed to cleanup expired sessions')
   ).map((result) => Number(result.numDeletedRows))
 }

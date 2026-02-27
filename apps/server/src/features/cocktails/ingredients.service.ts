@@ -3,7 +3,7 @@ import type { Ingredient, IngredientInsert, IngredientUpdate } from '@repo/schem
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -36,7 +36,7 @@ export function getIngredientById(db: DB, id: string): ResultAsync<Ingredient, A
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst(),
-    Errors.notFound('Ingredient')
+    AppError.notFound('Ingredient')
   )
 }
 
@@ -75,7 +75,7 @@ export function updateIngredient(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Ingredient')
+    AppError.notFound('Ingredient')
   )
 }
 
@@ -87,6 +87,6 @@ export function deleteIngredient(db: DB, id: string): ResultAsync<Ingredient, Ap
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Ingredient')
+    AppError.notFound('Ingredient')
   )
 }

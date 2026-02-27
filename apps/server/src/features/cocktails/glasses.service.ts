@@ -3,7 +3,7 @@ import { Glass, GlassInsert, GlassUpdate } from '@repo/schemas/glasses'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -36,7 +36,7 @@ export function getGlassById(db: DB, id: string): ResultAsync<Glass, AppError> {
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst(),
-    Errors.notFound('Glass')
+    AppError.notFound('Glass')
   )
 }
 
@@ -73,7 +73,7 @@ export function updateGlass(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Glass')
+    AppError.notFound('Glass')
   )
 }
 
@@ -85,6 +85,6 @@ export function deleteGlass(db: DB, id: string): ResultAsync<Glass, AppError> {
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Glass')
+    AppError.notFound('Glass')
   )
 }

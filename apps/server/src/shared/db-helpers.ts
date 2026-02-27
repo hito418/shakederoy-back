@@ -1,7 +1,8 @@
 import type { Database } from '@repo/schemas'
 import type { Kysely } from 'kysely'
 import { err, fromPromise, ok, ResultAsync } from 'neverthrow'
-import { Errors, type AppError } from './errors'
+import { AppError, isAppError } from './errors'
+import { ControlledTransaction } from 'kysely'
 
 export type PaginatedResult<T> = {
   data: T[]
@@ -24,13 +25,42 @@ export function cleanUpdate<T extends Record<string, unknown>>(
 
 export function dbQuery<T>(
   promise: Promise<T>,
-  errorFn: (e: unknown) => AppError = () => Errors.databaseError()
+  errorFn: (e: unknown) => AppError = () => AppError.databaseError()
 ): ResultAsync<T, AppError> {
   return fromPromise(promise, errorFn)
 }
 
+export function withTransaction<T>(
+  db: Kysely<Database>,
+  promise: (
+    transaction: ControlledTransaction<Database, []>
+  ) => Promise<T | AppError>
+): ResultAsync<T, AppError> {
+  return fromPromise(
+    async () => {
+      const trx = await db.startTransaction().execute()
+      try {
+        const result = await promise(trx)
+        if (isAppError(result)) {
+          await trx.rollback().execute()
+          return err(result)
+        }
+        await trx.commit().execute()
+        return ok(result)
+      } catch (e) {
+        await trx.rollback().execute()
+        if (isAppError(e)) {
+          return err(e)
+        }
+        return err(AppError.databaseError())
+      }
+    },
+    () => AppError.databaseError()
+  )
+}
+
 export function guard<T>(
-  error: AppError = Errors.notFound('Resource')
+  error: AppError = AppError.notFound('Resource')
 ): (value: T | undefined) => ResultAsync<T, AppError> {
   return (value) => {
     if (value === undefined) {
@@ -61,6 +91,6 @@ export function dbQueryPaginated<T>(
         totalPages: Math.ceil(total / size),
       }
     }),
-    () => Errors.databaseError()
+    () => AppError.databaseError()
   )
 }

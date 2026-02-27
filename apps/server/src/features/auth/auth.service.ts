@@ -4,7 +4,7 @@ import type { User } from '@repo/schemas/users'
 import type { Kysely } from 'kysely'
 import { ResultAsync, err, fromPromise, ok } from 'neverthrow'
 import { dbQuery, guard } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 type SafeUser = Omit<User, 'password'>
@@ -24,13 +24,13 @@ export function initAdmin(
   return dbQuery(db.selectFrom('users').select('id').limit(1).execute())
     .andThen((userList) => {
       if (userList.length > 0) {
-        return err(Errors.alreadyExists('Admin initialization'))
+        return err(AppError.alreadyExists('Admin initialization'))
       }
       return ok(undefined)
     })
     .andThen(() =>
       fromPromise(bcrypt.hash(password, 10), () =>
-        Errors.internalError('Failed to hash password')
+        AppError.internalError('Failed to hash password')
       )
     )
     .andThen((hashedPassword) =>
@@ -45,10 +45,10 @@ export function initAdmin(
           })
           .returningAll()
           .executeTakeFirst(),
-        () => Errors.databaseError('Failed to create admin user')
+        () => AppError.databaseError('Failed to create admin user')
       )
     )
-    .andThen(guard(Errors.databaseError('Failed to create admin user')))
+    .andThen(guard(AppError.databaseError('Failed to create admin user')))
     .map(({ password: _, ...safeUser }) => safeUser)
 }
 
@@ -59,7 +59,7 @@ export function registerUser(
   password: string
 ): ResultAsync<UserCredentials, AppError> {
   return fromPromise(bcrypt.hash(password, 10), () =>
-    Errors.internalError('Failed to hash password')
+    AppError.internalError('Failed to hash password')
   )
     .andThen((hashedPassword) =>
       dbQuery(
@@ -72,7 +72,7 @@ export function registerUser(
           })
           .returningAll()
           .executeTakeFirst(),
-        () => Errors.databaseError('Failed to register user')
+        () => AppError.databaseError('Failed to register user')
       )
     )
     .andThen(guard())
@@ -96,14 +96,14 @@ export function loginUser(
         eb.or([eb('email', '=', credential), eb('username', '=', credential)])
       )
       .executeTakeFirst(),
-    () => Errors.notFound('User')
+    () => AppError.notFound('User')
   )
-    .andThen(guard(Errors.notFound('User')))
+    .andThen(guard(AppError.notFound('User')))
     .andThen((user) =>
       fromPromise(bcrypt.compare(password, user.password), () =>
-        Errors.internalError('Password verification failed')
+        AppError.internalError('Password verification failed')
       ).andThen((isMatch) =>
-        isMatch ? ok(user) : err(Errors.invalidCredentials('Wrong password'))
+        isMatch ? ok(user) : err(AppError.invalidCredentials('Wrong password'))
       )
     )
     .map((user) => ({

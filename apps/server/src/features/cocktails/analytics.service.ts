@@ -5,7 +5,7 @@ import type { CocktailOfMonth } from '@repo/schemas/cocktail-of-month'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryMany, dbQueryPaginated, dbUpdate, withTransaction, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -96,7 +96,7 @@ export function deleteCocktailVote(db: DB, id: string, userId: string): ResultAs
         .where('user_id', '=', userId)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CocktailVote')
+    AppError.notFound('CocktailVote')
   )
 }
 
@@ -188,7 +188,7 @@ export function getCocktailOfMonthById(
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst(),
-    Errors.notFound('CocktailOfMonth')
+    AppError.notFound('CocktailOfMonth')
   )
 }
 
@@ -225,7 +225,7 @@ export function updateCocktailOfMonth(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CocktailOfMonth')
+    AppError.notFound('CocktailOfMonth')
   )
 }
 
@@ -240,6 +240,6 @@ export function deleteCocktailOfMonth(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CocktailOfMonth')
+    AppError.notFound('CocktailOfMonth')
   )
 }

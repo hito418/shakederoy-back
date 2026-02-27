@@ -4,7 +4,7 @@ import { User, UserUpdate } from '@repo/schemas/users'
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, dbQuery, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 type SafeUser = Omit<User, 'password'>
@@ -50,7 +50,7 @@ export function getUserById(db: DB, id: string): ResultAsync<SafeUser, AppError>
         .select([...safeUserColumns])
         .where('id', '=', id)
         .executeTakeFirst(),
-    Errors.notFound('User')
+    AppError.notFound('User')
   )
 }
 
@@ -61,7 +61,7 @@ export function createUser(
   password: string,
   role: 'admin' | 'user'
 ): ResultAsync<SafeUser, AppError> {
-  return dbQuery(bcrypt.hash(password, 10), () => Errors.internalError('Failed to hash password'))
+  return dbQuery(bcrypt.hash(password, 10), () => AppError.internalError('Failed to hash password'))
     .andThen((hashedPassword) =>
       dbInsert(
         () =>
@@ -86,7 +86,7 @@ export function updateUser(
   data: UserUpdate
 ): ResultAsync<SafeUser, AppError> {
   const hashIfNeeded = data.password
-    ? dbQuery(bcrypt.hash(data.password, 10), () => Errors.internalError('Failed to hash password'))
+    ? dbQuery(bcrypt.hash(data.password, 10), () => AppError.internalError('Failed to hash password'))
     : ResultAsync.fromSafePromise<string | undefined, AppError>(Promise.resolve(undefined))
 
   return hashIfNeeded.andThen((hashedPassword) => {
@@ -102,7 +102,7 @@ export function updateUser(
           .where('id', '=', id)
           .returning([...safeUserColumns])
           .executeTakeFirst(),
-      Errors.notFound('User')
+      AppError.notFound('User')
     )
   })
 }
@@ -115,6 +115,6 @@ export function deleteUser(db: DB, id: string): ResultAsync<{ id: string }, AppE
         .where('id', '=', id)
         .returning('id')
         .executeTakeFirst(),
-    Errors.notFound('User')
+    AppError.notFound('User')
   )
 }

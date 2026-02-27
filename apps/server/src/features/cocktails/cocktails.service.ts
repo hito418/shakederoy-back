@@ -3,7 +3,7 @@ import { Cocktail, CocktailInsert, CocktailUpdate } from '@repo/schemas/cocktail
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -36,7 +36,7 @@ export function getCocktailById(db: DB, id: string): ResultAsync<Cocktail, AppEr
         .selectAll()
         .where('id', '=', id)
         .executeTakeFirst(),
-    Errors.notFound('Cocktail')
+    AppError.notFound('Cocktail')
   )
 }
 
@@ -68,7 +68,7 @@ export function updateCocktail(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Cocktail')
+    AppError.notFound('Cocktail')
   )
 }
 
@@ -80,6 +80,6 @@ export function deleteCocktail(db: DB, id: string): ResultAsync<Cocktail, AppErr
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Cocktail')
+    AppError.notFound('Cocktail')
   )
 }

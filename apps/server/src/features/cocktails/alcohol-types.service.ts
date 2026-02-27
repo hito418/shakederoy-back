@@ -3,7 +3,7 @@ import { AlcoholType, AlcoholTypeInsert, AlcoholTypeUpdate } from '@repo/schemas
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -20,7 +20,7 @@ export function listAlcoholTypes(db: DB, page: number, pageSize: number): Result
 export function getAlcoholTypeById(db: DB, id: string): ResultAsync<AlcoholType, AppError> {
   return dbQueryFirst(
     () => db.selectFrom('alcohol_types').selectAll().where('id', '=', id).executeTakeFirst(),
-    Errors.notFound('AlcoholType')
+    AppError.notFound('AlcoholType')
   )
 }
 
@@ -40,13 +40,13 @@ export function updateAlcoholType(db: DB, id: string, data: AlcoholTypeUpdate): 
       db.updateTable('alcohol_types')
         .set(cleanUpdate(data))
         .where('id', '=', id).returningAll().executeTakeFirst(),
-    Errors.notFound('AlcoholType')
+    AppError.notFound('AlcoholType')
   )
 }
 
 export function deleteAlcoholType(db: DB, id: string): ResultAsync<AlcoholType, AppError> {
   return dbDelete(
     () => db.deleteFrom('alcohol_types').where('id', '=', id).returningAll().executeTakeFirst(),
-    Errors.notFound('AlcoholType')
+    AppError.notFound('AlcoholType')
   )
 }

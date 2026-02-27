@@ -9,7 +9,7 @@ import type {
 import type { Kysely } from 'kysely'
 import { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, withTransaction, type PaginatedResult } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -88,7 +88,7 @@ export function getCollectionById(
           ])
         )
         .executeTakeFirst(),
-    Errors.notFound('Collection')
+    AppError.notFound('Collection')
   )
 }
 
@@ -127,7 +127,7 @@ export function updateCollection(
         .where('user_id', '=', userId)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Collection')
+    AppError.notFound('Collection')
   )
 }
 
@@ -140,7 +140,7 @@ export function deleteCollection(db: DB, id: string, userId: string): ResultAsyn
         .where('user_id', '=', userId)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('Collection')
+    AppError.notFound('Collection')
   )
 }
 
@@ -166,7 +166,7 @@ export function listCollectionCocktails(
           ])
         )
         .executeTakeFirst(),
-    Errors.notFound('Collection')
+    AppError.notFound('Collection')
   ).andThen(() =>
     dbQueryPaginated(
       db,
@@ -234,6 +234,6 @@ export function removeCocktailFromCollection(
         )
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CollectionCocktail')
+    AppError.notFound('CollectionCocktail')
   )
 }

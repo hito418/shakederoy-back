@@ -6,7 +6,7 @@ import type { CocktailStyleJunction, CocktailStyleJunctionInsert } from '@repo/s
 import type { Kysely } from 'kysely'
 import type { ResultAsync } from 'neverthrow'
 import { cleanUpdate, dbDelete, dbInsert, dbQueryMany, dbUpdate } from 'src/shared/db-helpers'
-import { Errors, type AppError } from 'src/shared/errors'
+import { AppError } from 'src/shared/errors'
 
 type DB = Kysely<Database>
 
@@ -60,7 +60,7 @@ export function updateCocktailIngredient(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CocktailIngredient')
+    AppError.notFound('CocktailIngredient')
   )
 }
 
@@ -75,7 +75,7 @@ export function deleteCocktailIngredient(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CocktailIngredient')
+    AppError.notFound('CocktailIngredient')
   )
 }
 
@@ -126,7 +126,7 @@ export function deleteCocktailPhoto(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CocktailPhoto')
+    AppError.notFound('CocktailPhoto')
   )
 }
 
@@ -179,7 +179,7 @@ export function updatePreparationStep(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PreparationStep')
+    AppError.notFound('PreparationStep')
   )
 }
 
@@ -194,7 +194,7 @@ export function deletePreparationStep(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('PreparationStep')
+    AppError.notFound('PreparationStep')
   )
 }
 
@@ -242,6 +242,6 @@ export function removeCocktailStyle(
         .where('id', '=', id)
         .returningAll()
         .executeTakeFirst(),
-    Errors.notFound('CocktailStyleJunction')
+    AppError.notFound('CocktailStyleJunction')
   )
 }
