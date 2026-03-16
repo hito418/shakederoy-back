@@ -1,14 +1,25 @@
-import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
-import { describeRoute, resolver, validator } from 'hono-openapi'
-import { isAuth } from 'src/features/auth/auth.middleware'
-import { SafeUserSchema, SessionPayloadSchema } from 'src/features/auth/auth.dto'
-import { initAdmin, registerUser, loginUser } from 'src/features/auth/auth.service'
-import { createSession, validateSession, deleteSession } from 'src/features/auth/session.service'
-import { env } from 'hono/adapter'
 import { type } from 'arktype'
-import { HonoVar } from 'src/shared/hono'
-import { errorResponses } from 'src/shared/response-schemas'
+import { Hono } from 'hono'
+import { describeRoute, resolver, validator } from 'hono-openapi'
+import { env } from 'hono/adapter'
+import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
+import {
+  SafeUserSchema,
+  SessionPayloadSchema,
+} from 'src/features/auth/auth.dto'
+import { isAuth } from 'src/features/auth/auth.middleware'
+import {
+  initAdmin,
+  loginUser,
+  registerUser,
+} from 'src/features/auth/auth.service'
+import {
+  createSession,
+  deleteSession,
+  validateSession,
+} from 'src/features/auth/session.service'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { errorResponses } from 'src/shared/response-schemas'
 
 const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -17,7 +28,7 @@ const SESSION_COOKIE_OPTIONS = {
   path: '/',
 }
 
-const authRoute = new HonoVar()
+const authRoute = new Hono()
   .basePath('/auth')
   .post(
     '/init',
@@ -48,7 +59,8 @@ const authRoute = new HonoVar()
 
       return result.match(
         (user) => ctx.json(user, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -60,7 +72,9 @@ const authRoute = new HonoVar()
       responses: {
         201: {
           description: 'User registered and session created',
-          content: { 'application/json': { schema: resolver(SessionPayloadSchema) } },
+          content: {
+            'application/json': { schema: resolver(SessionPayloadSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -78,17 +92,31 @@ const authRoute = new HonoVar()
       const db = ctx.get('database')
       const { COOKIE_SECRET } = env(ctx)
 
-      const result = await registerUser(db, username, email, password)
-        .andThen((credentials) =>
-          createSession(db, credentials.id, credentials.username, credentials.role)
-        )
+      const result = await registerUser(db, username, email, password).andThen(
+        (credentials) =>
+          createSession(
+            db,
+            credentials.id,
+            credentials.username,
+            credentials.role
+          )
+      )
 
       if (result.isErr()) {
-        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
+        return ctx.json(
+          { message: result.error.message },
+          errorToHttpStatus(result.error)
+        )
       }
 
       const { sessionId, payload } = result.value
-      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
+      await setSignedCookie(
+        ctx,
+        'session_id',
+        sessionId,
+        COOKIE_SECRET,
+        SESSION_COOKIE_OPTIONS
+      )
 
       return ctx.json(payload, 201)
     }
@@ -101,7 +129,9 @@ const authRoute = new HonoVar()
       responses: {
         200: {
           description: 'Logged in and session created',
-          content: { 'application/json': { schema: resolver(SessionPayloadSchema) } },
+          content: {
+            'application/json': { schema: resolver(SessionPayloadSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -137,17 +167,31 @@ const authRoute = new HonoVar()
       const db = ctx.get('database')
       const { COOKIE_SECRET } = env(ctx)
 
-      const result = await loginUser(db, credential, password)
-        .andThen((credentials) =>
-          createSession(db, credentials.id, credentials.username, credentials.role)
-        )
+      const result = await loginUser(db, credential, password).andThen(
+        (credentials) =>
+          createSession(
+            db,
+            credentials.id,
+            credentials.username,
+            credentials.role
+          )
+      )
 
       if (result.isErr()) {
-        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
+        return ctx.json(
+          { message: result.error.message },
+          errorToHttpStatus(result.error)
+        )
       }
 
       const { sessionId, payload } = result.value
-      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
+      await setSignedCookie(
+        ctx,
+        'session_id',
+        sessionId,
+        COOKIE_SECRET,
+        SESSION_COOKIE_OPTIONS
+      )
 
       return ctx.json(payload, 200)
     }

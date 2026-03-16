@@ -7,12 +7,13 @@ import { showRoutes } from 'hono/dev'
 import './config/arktype'
 import authRoute from './routes/auth'
 import barsRoute from './routes/bars'
-import cocktailsRoute from './routes/cocktails'
-import partiesRoute from './routes/parties'
-import usersRoute from './routes/users'
+// import cocktailsRoute from './routes/cocktails'
+// import partiesRoute from './routes/parties'
+// import usersRoute from './routes/users'
 import { db } from './shared/db'
 import { env } from './shared/env'
 import './shared/hono'
+import { testClient } from 'hono/testing'
 
 const app = new Hono()
   .use(async (ctx, next) => {
@@ -26,10 +27,10 @@ const app = new Hono()
     })
   )
   .route('/', authRoute)
-  .route('/', usersRoute)
-  .route('/', cocktailsRoute)
+  // .route('/', usersRoute)
+  // .route('/', cocktailsRoute)
   .route('/', barsRoute)
-  .route('/', partiesRoute)
+  // .route('/', partiesRoute)
   .get('/healthcheck', (ctx) => {
     return ctx.json({ status: 'ok' }, 200)
   })
