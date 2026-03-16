@@ -1,18 +1,16 @@
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
-import { CocktailSchema, CocktailPaginatedSchema } from 'src/features/cocktails/cocktails.dto'
 import {
-  listCocktails,
-  getCocktailById,
-  createCocktail,
-  updateCocktail,
-  deleteCocktail,
-} from 'src/features/cocktails/cocktails.service'
+  CocktailSchema,
+  CocktailPaginatedSchema,
+} from 'src/features/cocktails/cocktails.dto'
+import { cocktailsService } from 'src/container'
+import { provide } from 'src/shared/provide'
 import stylesRoute from './styles'
 import extrasRoute from './extras'
 import analyticsRoute from './analytics'
@@ -20,7 +18,9 @@ import glassesRoute from './glasses'
 import alcoholTypesRoute from './alcohol-types'
 import ingredientsRoute from './ingredients'
 
-const cocktailsRoute = new HonoVar().basePath('/cocktails')
+const cocktailsRoute = new Hono()
+  .basePath('/cocktails')
+  .use(provide('cocktails', cocktailsService))
 
 cocktailsRoute
   .get(
@@ -31,18 +31,19 @@ cocktailsRoute
       responses: {
         200: {
           description: 'Paginated list of cocktails',
-          content: { 'application/json': { schema: resolver(CocktailPaginatedSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailPaginatedSchema) },
+          },
         },
         ...errorResponses,
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listCocktails(db, page, pageSize)
+      const result = await ctx.get('cocktails').list(page, pageSize)
 
       return result.match(
         (cocktailList) => ctx.json(cocktailList, 200),
@@ -58,17 +59,18 @@ cocktailsRoute
       responses: {
         200: {
           description: 'Cocktail details',
-          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailSchema) },
+          },
         },
         ...errorResponses,
       },
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getCocktailById(db, id)
+      const result = await ctx.get('cocktails').getById(id)
 
       return result.match(
         (cocktail) => ctx.json(cocktail, 200),
@@ -84,7 +86,9 @@ cocktailsRoute
       responses: {
         201: {
           description: 'Created cocktail',
-          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -103,11 +107,11 @@ cocktailsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const payload = ctx.get('userPayload')
-      const { name, slug, description, intensity, difficulty, prepTime, glassId } = ctx.req.valid('json')
+      const { name, slug, description, intensity, difficulty, prepTime, glassId } =
+        ctx.req.valid('json')
 
-      const result = await createCocktail(db, {
+      const result = await ctx.get('cocktails').create({
         name,
         slug,
         description,
@@ -132,7 +136,9 @@ cocktailsRoute
       responses: {
         200: {
           description: 'Updated cocktail',
-          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -152,11 +158,11 @@ cocktailsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
-      const { name, slug, description, intensity, difficulty, prepTime, glassId } = ctx.req.valid('json')
+      const { name, slug, description, intensity, difficulty, prepTime, glassId } =
+        ctx.req.valid('json')
 
-      const result = await updateCocktail(db, id, {
+      const result = await ctx.get('cocktails').update(id, {
         name,
         slug,
         description,
@@ -180,7 +186,9 @@ cocktailsRoute
       responses: {
         200: {
           description: 'Deleted cocktail',
-          content: { 'application/json': { schema: resolver(CocktailSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -188,10 +196,9 @@ cocktailsRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteCocktail(db, id)
+      const result = await ctx.get('cocktails').delete(id)
 
       return result.match(
         (deletedCocktail) => ctx.json(deletedCocktail, 200),

@@ -1,20 +1,17 @@
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
 import { AlcoholTypeSchema, AlcoholTypePaginatedSchema } from 'src/features/cocktails/cocktails.dto'
-import {
-  listAlcoholTypes,
-  getAlcoholTypeById,
-  createAlcoholType,
-  updateAlcoholType,
-  deleteAlcoholType,
-} from 'src/features/cocktails/alcohol-types.service'
+import { alcoholTypesService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const alcoholTypesRoute = new HonoVar().basePath('/alcohol-types')
+const alcoholTypesRoute = new Hono()
+  .basePath('/alcohol-types')
+  .use(provide('alcoholTypes', alcoholTypesService))
 
 alcoholTypesRoute
   .get(
@@ -32,11 +29,10 @@ alcoholTypesRoute
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listAlcoholTypes(db, page, pageSize)
+      const result = await ctx.get('alcoholTypes').list(page, pageSize)
 
       return result.match(
         (alcoholTypeList) => ctx.json(alcoholTypeList, 200),
@@ -59,10 +55,9 @@ alcoholTypesRoute
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getAlcoholTypeById(db, id)
+      const result = await ctx.get('alcoholTypes').getById(id)
 
       return result.match(
         (alcoholType) => ctx.json(alcoholType, 200),
@@ -94,10 +89,9 @@ alcoholTypesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { name, description, abvRangeMin, abvRangeMax } = ctx.req.valid('json')
 
-      const result = await createAlcoholType(db, {
+      const result = await ctx.get('alcoholTypes').create({
         name,
         description,
         abv_range_min: abvRangeMin,
@@ -135,11 +129,10 @@ alcoholTypesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { name, description, abvRangeMin, abvRangeMax } = ctx.req.valid('json')
 
-      const result = await updateAlcoholType(db, id, {
+      const result = await ctx.get('alcoholTypes').update(id, {
         name,
         description,
         abv_range_min: abvRangeMin,
@@ -168,10 +161,9 @@ alcoholTypesRoute
     isAuth('admin'),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteAlcoholType(db, id)
+      const result = await ctx.get('alcoholTypes').delete(id)
 
       return result.match(
         (deletedAlcoholType) => ctx.json(deletedAlcoholType, 200),

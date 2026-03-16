@@ -1,8 +1,9 @@
-import { Database } from '@repo/schemas'
-import { Kysely } from 'kysely'
+import type { SessionService } from 'src/features/auth/session.service'
+import type { SessionPayload } from 'src/features/auth/session.service'
 
 declare module 'hono' {
   export interface ContextVariableMap {
-    database: Kysely<Database>
+    sessionService: SessionService
+    userPayload: SessionPayload
   }
 }

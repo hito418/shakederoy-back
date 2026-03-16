@@ -1,14 +1,14 @@
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
 import { describeRoute, resolver, validator } from 'hono-openapi'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { SafeUserSchema, SessionPayloadSchema } from 'src/features/auth/auth.dto'
-import { initAdmin, registerUser, loginUser } from 'src/features/auth/auth.service'
-import { createSession, validateSession, deleteSession } from 'src/features/auth/session.service'
-import { env } from 'hono/adapter'
 import { type } from 'arktype'
-import { HonoVar } from 'src/shared/hono'
+import { env } from 'src/shared/env'
 import { errorResponses } from 'src/shared/response-schemas'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { authService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
 const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
@@ -17,8 +17,9 @@ const SESSION_COOKIE_OPTIONS = {
   path: '/',
 }
 
-const authRoute = new HonoVar()
+const authRoute = new Hono()
   .basePath('/auth')
+  .use(provide('auth', authService))
   .post(
     '/init',
     describeRoute({
@@ -42,9 +43,8 @@ const authRoute = new HonoVar()
     ),
     async (ctx) => {
       const { username, email, password } = ctx.req.valid('json')
-      const db = ctx.get('database')
 
-      const result = await initAdmin(db, username, email, password)
+      const result = await ctx.get('auth').initAdmin(username, email, password)
 
       return result.match(
         (user) => ctx.json(user, 201),
@@ -75,20 +75,32 @@ const authRoute = new HonoVar()
     ),
     async (ctx) => {
       const { username, email, password } = ctx.req.valid('json')
-      const db = ctx.get('database')
-      const { COOKIE_SECRET } = env(ctx)
+      const COOKIE_SECRET = env.COOKIE_SECRET
 
-      const result = await registerUser(db, username, email, password)
+      const result = await ctx
+        .get('auth')
+        .registerUser(username, email, password)
         .andThen((credentials) =>
-          createSession(db, credentials.id, credentials.username, credentials.role)
+          ctx
+            .get('sessionService')
+            .create(credentials.id, credentials.username, credentials.role)
         )
 
       if (result.isErr()) {
-        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
+        return ctx.json(
+          { message: result.error.message },
+          errorToHttpStatus(result.error)
+        )
       }
 
       const { sessionId, payload } = result.value
-      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
+      await setSignedCookie(
+        ctx,
+        'session_id',
+        sessionId,
+        COOKIE_SECRET,
+        SESSION_COOKIE_OPTIONS
+      )
 
       return ctx.json(payload, 201)
     }
@@ -107,8 +119,7 @@ const authRoute = new HonoVar()
       },
     }),
     async (ctx, next) => {
-      const { COOKIE_SECRET } = env(ctx)
-      const db = ctx.get('database')
+      const COOKIE_SECRET = env.COOKIE_SECRET
       const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
       if (!sessionId) {
@@ -116,7 +127,7 @@ const authRoute = new HonoVar()
         return
       }
 
-      const result = await validateSession(db, sessionId)
+      const result = await ctx.get('sessionService').validate(sessionId)
 
       if (result.isErr()) {
         await next()
@@ -134,20 +145,32 @@ const authRoute = new HonoVar()
     ),
     async (ctx) => {
       const { credential, password } = ctx.req.valid('json')
-      const db = ctx.get('database')
-      const { COOKIE_SECRET } = env(ctx)
+      const COOKIE_SECRET = env.COOKIE_SECRET
 
-      const result = await loginUser(db, credential, password)
+      const result = await ctx
+        .get('auth')
+        .loginUser(credential, password)
         .andThen((credentials) =>
-          createSession(db, credentials.id, credentials.username, credentials.role)
+          ctx
+            .get('sessionService')
+            .create(credentials.id, credentials.username, credentials.role)
         )
 
       if (result.isErr()) {
-        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
+        return ctx.json(
+          { message: result.error.message },
+          errorToHttpStatus(result.error)
+        )
       }
 
       const { sessionId, payload } = result.value
-      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
+      await setSignedCookie(
+        ctx,
+        'session_id',
+        sessionId,
+        COOKIE_SECRET,
+        SESSION_COOKIE_OPTIONS
+      )
 
       return ctx.json(payload, 200)
     }
@@ -164,12 +187,11 @@ const authRoute = new HonoVar()
     }),
     isAuth(),
     async (ctx) => {
-      const { COOKIE_SECRET } = env(ctx)
+      const COOKIE_SECRET = env.COOKIE_SECRET
       const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
       if (sessionId) {
-        const db = ctx.get('database')
-        await deleteSession(db, sessionId)
+        await ctx.get('sessionService').delete(sessionId)
       }
 
       deleteCookie(ctx, 'session_id')

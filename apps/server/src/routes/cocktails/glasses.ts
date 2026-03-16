@@ -1,20 +1,17 @@
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
 import { GlassSchema, GlassPaginatedSchema } from 'src/features/cocktails/cocktails.dto'
-import {
-  listGlasses,
-  getGlassById,
-  createGlass,
-  updateGlass,
-  deleteGlass,
-} from 'src/features/cocktails/glasses.service'
+import { glassesService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const glassesRoute = new HonoVar().basePath('/glasses')
+const glassesRoute = new Hono()
+  .basePath('/glasses')
+  .use(provide('glasses', glassesService))
 
 glassesRoute
   .get(
@@ -32,11 +29,10 @@ glassesRoute
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listGlasses(db, page, pageSize)
+      const result = await ctx.get('glasses').list(page, pageSize)
 
       return result.match(
         (glassList) => ctx.json(glassList, 200),
@@ -59,10 +55,9 @@ glassesRoute
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getGlassById(db, id)
+      const result = await ctx.get('glasses').getById(id)
 
       return result.match(
         (glass) => ctx.json(glass, 200),
@@ -94,10 +89,9 @@ glassesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { name, description, capacity, imageUrl } = ctx.req.valid('json')
 
-      const result = await createGlass(db, {
+      const result = await ctx.get('glasses').create({
         name,
         description,
         capacity,
@@ -135,11 +129,10 @@ glassesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { name, description, capacity, imageUrl } = ctx.req.valid('json')
 
-      const result = await updateGlass(db, id, {
+      const result = await ctx.get('glasses').update(id, {
         name,
         description,
         capacity,
@@ -168,10 +161,9 @@ glassesRoute
     isAuth('admin'),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteGlass(db, id)
+      const result = await ctx.get('glasses').delete(id)
 
       return result.match(
         (deletedGlass) => ctx.json(deletedGlass, 200),

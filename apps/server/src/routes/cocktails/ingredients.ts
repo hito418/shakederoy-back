@@ -1,7 +1,7 @@
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
@@ -9,15 +9,12 @@ import {
   IngredientSchema,
   IngredientPaginatedSchema,
 } from 'src/features/cocktails/cocktails.dto'
-import {
-  listIngredients,
-  getIngredientById,
-  createIngredient,
-  updateIngredient,
-  deleteIngredient,
-} from 'src/features/cocktails/ingredients.service'
+import { ingredientsService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const ingredientsRoute = new HonoVar().basePath('/ingredients')
+const ingredientsRoute = new Hono()
+  .basePath('/ingredients')
+  .use(provide('ingredients', ingredientsService))
 
 ingredientsRoute
   .get(
@@ -37,11 +34,10 @@ ingredientsRoute
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listIngredients(db, page, pageSize)
+      const result = await ctx.get('ingredients').list(page, pageSize)
 
       return result.match(
         (ingredientList) => ctx.json(ingredientList, 200),
@@ -67,10 +63,9 @@ ingredientsRoute
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getIngredientById(db, id)
+      const result = await ctx.get('ingredients').getById(id)
 
       return result.match(
         (ingredient) => ctx.json(ingredient, 200),
@@ -108,7 +103,6 @@ ingredientsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const {
         name,
         description,
@@ -118,7 +112,7 @@ ingredientsRoute
         imageUrl,
       } = ctx.req.valid('json')
 
-      const result = await createIngredient(db, {
+      const result = await ctx.get('ingredients').create({
         name,
         description,
         category,
@@ -164,7 +158,6 @@ ingredientsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const {
         name,
@@ -175,7 +168,7 @@ ingredientsRoute
         imageUrl,
       } = ctx.req.valid('json')
 
-      const result = await updateIngredient(db, id, {
+      const result = await ctx.get('ingredients').update(id, {
         name,
         description,
         category,
@@ -209,10 +202,9 @@ ingredientsRoute
     isAuth('admin'),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteIngredient(db, id)
+      const result = await ctx.get('ingredients').delete(id)
 
       return result.match(
         (deletedIngredient) => ctx.json(deletedIngredient, 200),

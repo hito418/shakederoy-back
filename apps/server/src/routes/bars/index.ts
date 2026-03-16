@@ -12,26 +12,15 @@ import {
   BarPhotoSchema,
   BarSignatureCocktailSchema,
 } from 'src/features/bars/bars.dto'
-import {
-  createBar,
-  createBarPhoto,
-  createBarSignatureCocktail,
-  deleteBar,
-  deleteBarPhoto,
-  deleteBarSignatureCocktail,
-  getBarById,
-  listBarLikes,
-  listBarPhotos,
-  listBars,
-  listBarSignatureCocktails,
-  toggleBarLike,
-  updateBar,
-} from 'src/features/bars/bars.service'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
+import { barsService } from 'src/container'
+import { provide } from 'src/shared/provide'
 import reviewsRoute from './reviews'
 
-const barsRoute = new Hono().basePath('/bars')
+const barsRoute = new Hono()
+  .basePath('/bars')
+  .use(provide('bars', barsService))
 
 // --- Bars CRUD ---
 
@@ -53,11 +42,10 @@ barsRoute
     }),
     validator('query', BarListQuerySchema),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1, city, style, search } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listBars(db, page, pageSize, { city, style, search })
+      const result = await ctx.get('bars').list(page, pageSize, { city, style, search })
 
       return result.match(
         (bars) => ctx.json(bars, 200),
@@ -84,12 +72,10 @@ barsRoute
     optionalAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await getBarById(
-        db,
+      const result = await ctx.get('bars').getById(
         id,
         payload?.sub.id ?? null
       )
@@ -141,12 +127,10 @@ barsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const payload = ctx.get('userPayload')
       const data = ctx.req.valid('json')
 
-      const result = await createBar(
-        db,
+      const result = await ctx.get('bars').create(
         {
           name: data.name,
           slug: data.slug,
@@ -208,12 +192,11 @@ barsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
       const data = ctx.req.valid('json')
 
-      const result = await updateBar(db, id, payload.sub.id, data)
+      const result = await ctx.get('bars').update(id, payload.sub.id, data)
 
       return result.match(
         (bar) => ctx.json(bar, 200),
@@ -240,11 +223,10 @@ barsRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await deleteBar(db, id, payload.sub.id)
+      const result = await ctx.get('bars').delete(id, payload.sub.id)
 
       return result.match(
         (bar) => ctx.json(bar, 200),
@@ -274,10 +256,9 @@ barsRoute
     }),
     validator('param', type({ barId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
 
-      const result = await listBarPhotos(db, barId)
+      const result = await ctx.get('bars').listPhotos(barId)
 
       return result.match(
         (photos) => ctx.json(photos, 200),
@@ -310,14 +291,12 @@ barsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
       const data = ctx.req.valid('json')
 
       const payload = ctx.get('userPayload')
 
-      const result = await createBarPhoto(
-        db,
+      const result = await ctx.get('bars').createPhoto(
         {
           bar_id: barId,
           url: data.url,
@@ -350,11 +329,10 @@ barsRoute
     isAuth(),
     validator('param', type({ barId: 'string', id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId, id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await deleteBarPhoto(db, barId, id, payload.sub.id)
+      const result = await ctx.get('bars').deletePhoto(barId, id, payload.sub.id)
 
       return result.match(
         (photo) => ctx.json(photo, 200),
@@ -386,10 +364,9 @@ barsRoute
     }),
     validator('param', type({ barId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
 
-      const result = await listBarSignatureCocktails(db, barId)
+      const result = await ctx.get('bars').listSignatureCocktails(barId)
 
       return result.match(
         (cocktails) => ctx.json(cocktails, 200),
@@ -427,14 +404,12 @@ barsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
       const data = ctx.req.valid('json')
 
       const payload = ctx.get('userPayload')
 
-      const result = await createBarSignatureCocktail(
-        db,
+      const result = await ctx.get('bars').createSignatureCocktail(
         {
           bar_id: barId,
           cocktail_id: data.cocktail_id,
@@ -472,12 +447,10 @@ barsRoute
     isAuth(),
     validator('param', type({ barId: 'string', id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId, id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await deleteBarSignatureCocktail(
-        db,
+      const result = await ctx.get('bars').deleteSignatureCocktail(
         barId,
         id,
         payload.sub.id
@@ -512,12 +485,11 @@ barsRoute
     validator('param', type({ barId: 'string' })),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listBarLikes(db, barId, page, pageSize)
+      const result = await ctx.get('bars').listLikes(barId, page, pageSize)
 
       return result.match(
         (likes) => ctx.json(likes, 200),
@@ -544,11 +516,10 @@ barsRoute
     isAuth(),
     validator('param', type({ barId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await toggleBarLike(db, barId, payload.sub.id)
+      const result = await ctx.get('bars').toggleLike(barId, payload.sub.id)
 
       return result.match(
         (toggle) => ctx.json(toggle, 200),

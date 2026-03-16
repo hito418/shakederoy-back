@@ -1,20 +1,19 @@
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
-import { CocktailStyleSchema, CocktailStylePaginatedSchema } from 'src/features/cocktails/cocktails.dto'
 import {
-  listCocktailStyles,
-  getCocktailStyleById,
-  createCocktailStyle,
-  updateCocktailStyle,
-  deleteCocktailStyle,
-} from 'src/features/cocktails/styles.service'
+  CocktailStyleSchema,
+  CocktailStylePaginatedSchema,
+} from 'src/features/cocktails/cocktails.dto'
+import { stylesService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const stylesRoute = new HonoVar()
+const stylesRoute = new Hono()
+  .use(provide('styles', stylesService))
 
 stylesRoute
   .get(
@@ -25,22 +24,26 @@ stylesRoute
       responses: {
         200: {
           description: 'Paginated list of cocktail styles',
-          content: { 'application/json': { schema: resolver(CocktailStylePaginatedSchema) } },
+          content: {
+            'application/json': {
+              schema: resolver(CocktailStylePaginatedSchema),
+            },
+          },
         },
         ...errorResponses,
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listCocktailStyles(db, page, pageSize)
+      const result = await ctx.get('styles').list(page, pageSize)
 
       return result.match(
         (styleList) => ctx.json(styleList, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -52,21 +55,23 @@ stylesRoute
       responses: {
         200: {
           description: 'Cocktail style details',
-          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailStyleSchema) },
+          },
         },
         ...errorResponses,
       },
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getCocktailStyleById(db, id)
+      const result = await ctx.get('styles').getById(id)
 
       return result.match(
         (style) => ctx.json(style, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -78,7 +83,9 @@ stylesRoute
       responses: {
         201: {
           description: 'Created cocktail style',
-          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailStyleSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -92,14 +99,14 @@ stylesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { name, description } = ctx.req.valid('json')
 
-      const result = await createCocktailStyle(db, { name, description })
+      const result = await ctx.get('styles').create({ name, description })
 
       return result.match(
         (newStyle) => ctx.json(newStyle, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -111,7 +118,9 @@ stylesRoute
       responses: {
         200: {
           description: 'Updated cocktail style',
-          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailStyleSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -126,15 +135,17 @@ stylesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { name, description } = ctx.req.valid('json')
 
-      const result = await updateCocktailStyle(db, id, { name, description })
+      const result = await ctx
+        .get('styles')
+        .update(id, { name, description })
 
       return result.match(
         (updatedStyle) => ctx.json(updatedStyle, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )
@@ -146,7 +157,9 @@ stylesRoute
       responses: {
         200: {
           description: 'Deleted cocktail style',
-          content: { 'application/json': { schema: resolver(CocktailStyleSchema) } },
+          content: {
+            'application/json': { schema: resolver(CocktailStyleSchema) },
+          },
         },
         ...errorResponses,
       },
@@ -154,14 +167,14 @@ stylesRoute
     isAuth('admin'),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteCocktailStyle(db, id)
+      const result = await ctx.get('styles').delete(id)
 
       return result.match(
         (deletedStyle) => ctx.json(deletedStyle, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
       )
     }
   )

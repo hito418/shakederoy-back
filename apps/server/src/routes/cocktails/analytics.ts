@@ -1,7 +1,7 @@
 import { type } from 'arktype'
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import { env } from 'hono/adapter'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
@@ -12,20 +12,11 @@ import {
   CocktailViewPaginatedSchema,
   CocktailOfMonthSchema,
 } from 'src/features/cocktails/cocktails.dto'
-import {
-  listCocktailVotes,
-  voteCocktail,
-  deleteCocktailVote,
-  listCocktailViews,
-  createCocktailView,
-  listCocktailOfMonth,
-  getCocktailOfMonthById,
-  createCocktailOfMonth,
-  updateCocktailOfMonth,
-  deleteCocktailOfMonth,
-} from 'src/features/cocktails/analytics.service'
+import { analyticsService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const analyticsRoute = new HonoVar()
+const analyticsRoute = new Hono()
+  .use(provide('analytics', analyticsService))
 
 // --- Votes ---
 
@@ -46,12 +37,11 @@ analyticsRoute
     validator('param', type({ cocktailId: 'string' })),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listCocktailVotes(db, cocktailId, page, pageSize)
+      const result = await ctx.get('analytics').listVotes(cocktailId, page, pageSize)
 
       return result.match(
         (votes) => ctx.json(votes, 200),
@@ -81,12 +71,11 @@ analyticsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
       const { voteType } = ctx.req.valid('json')
       const payload = ctx.get('userPayload')
 
-      const result = await voteCocktail(db, cocktailId, payload.sub.id, voteType)
+      const result = await ctx.get('analytics').vote(cocktailId, payload.sub.id, voteType)
 
       return result.match(
         (vote) => ctx.json(vote, 200),
@@ -110,11 +99,10 @@ analyticsRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await deleteCocktailVote(db, id, payload.sub.id)
+      const result = await ctx.get('analytics').deleteVote(id, payload.sub.id)
 
       return result.match(
         (vote) => ctx.json(vote, 200),
@@ -143,12 +131,11 @@ analyticsRoute
     validator('param', type({ cocktailId: 'string' })),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listCocktailViews(db, cocktailId, page, pageSize)
+      const result = await ctx.get('analytics').listViews(cocktailId, page, pageSize)
 
       return result.match(
         (views) => ctx.json(views, 200),
@@ -171,7 +158,6 @@ analyticsRoute
     }),
     validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
 
       const forwarded = ctx.req.header('x-forwarded-for')
@@ -181,7 +167,7 @@ analyticsRoute
       const hourOfDay = now.getHours()
       const dayOfWeek = now.getDay()
 
-      const result = await createCocktailView(db, {
+      const result = await ctx.get('analytics').createView({
         cocktail_id: cocktailId,
         ip_address: ipAddress,
         user_agent: userAgent,
@@ -217,10 +203,9 @@ analyticsRoute
       type({ year: 'string.numeric.parse', month: 'string.numeric.parse' })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { year, month } = ctx.req.valid('query')
 
-      const result = await listCocktailOfMonth(db, year, month)
+      const result = await ctx.get('analytics').listOfMonth(year, month)
 
       return result.match(
         (entries) => ctx.json(entries, 200),
@@ -243,10 +228,9 @@ analyticsRoute
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getCocktailOfMonthById(db, id)
+      const result = await ctx.get('analytics').getOfMonthById(id)
 
       return result.match(
         (entry) => ctx.json(entry, 200),
@@ -278,10 +262,9 @@ analyticsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId, year, month, rank } = ctx.req.valid('json')
 
-      const result = await createCocktailOfMonth(db, {
+      const result = await ctx.get('analytics').createOfMonth({
         cocktail_id: cocktailId,
         year,
         month,
@@ -319,11 +302,10 @@ analyticsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { cocktailId, year, month, rank } = ctx.req.valid('json')
 
-      const result = await updateCocktailOfMonth(db, id, {
+      const result = await ctx.get('analytics').updateOfMonth(id, {
         cocktail_id: cocktailId,
         year,
         month,
@@ -352,10 +334,9 @@ analyticsRoute
     isAuth('admin'),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteCocktailOfMonth(db, id)
+      const result = await ctx.get('analytics').deleteOfMonth(id)
 
       return result.match(
         (entry) => ctx.json(entry, 200),

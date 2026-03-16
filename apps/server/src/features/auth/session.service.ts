@@ -1,12 +1,8 @@
 import { randomBytes } from 'node:crypto'
-import type { Kysely } from 'kysely'
-import type { Database } from '@repo/schemas'
 import type { User } from '@repo/schemas/users'
 import { ResultAsync, err, ok } from 'neverthrow'
+import { DbService } from 'src/shared/db-service'
 import { AppError } from 'src/shared/errors'
-import { dbQuery, guard } from 'src/shared/db-helpers'
-
-type DB = Kysely<Database>
 
 export interface SessionPayload {
   sub: { id: string }
@@ -20,95 +16,113 @@ function generateSessionId(): string {
   return randomBytes(32).toString('hex')
 }
 
-export function createSession(
-  db: DB,
-  userId: string,
-  username: string,
-  role: User['role']
-): ResultAsync<{ sessionId: string; payload: SessionPayload }, AppError> {
-  const sessionId = generateSessionId()
-  const expiresAt = new Date(Date.now() + SESSION_DURATION_MS)
+export class SessionService {
+  constructor(private db: DbService) {}
 
-  return dbQuery(
-    db
-      .insertInto('sessions')
-      .values({
-        id: sessionId,
-        user_id: userId,
-        expires_at: expiresAt,
-      })
-      .returning(['id', 'user_id', 'expires_at'])
-      .executeTakeFirst(),
-    () => AppError.databaseError('Failed to create session')
-  ).map(() => ({
-    sessionId,
-    payload: {
-      sub: { id: userId },
-      username,
-      role,
-    },
-  }))
-}
+  create(
+    userId: string,
+    username: string,
+    role: User['role']
+  ): ResultAsync<{ sessionId: string; payload: SessionPayload }, AppError> {
+    const sessionId = generateSessionId()
+    const expiresAt = new Date(Date.now() + SESSION_DURATION_MS)
 
-export function validateSession(
-  db: DB,
-  sessionId: string
-): ResultAsync<SessionPayload, AppError> {
-  return dbQuery(
-    db
-      .selectFrom('sessions')
-      .innerJoin('users', 'users.id', 'sessions.user_id')
-      .select([
-        'sessions.user_id',
-        'sessions.expires_at',
-        'users.username',
-        'users.role',
-      ])
-      .where('sessions.id', '=', sessionId)
-      .executeTakeFirst(),
-    () => AppError.unauthorized('Invalid session')
-  )
-    .andThen(guard(AppError.databaseError('Failed to validate session')))
-    .andThen((session) => {
-      if (new Date(session.expires_at).valueOf() < Date.now()) {
-        return deleteSession(db, sessionId).andThen(() =>
-          err(AppError.unauthorized('Session expired'))
+    return this.db
+      .query(
+        (db) =>
+          db
+            .insertInto('sessions')
+            .values({
+              id: sessionId,
+              user_id: userId,
+              expires_at: expiresAt,
+            })
+            .returning(['id', 'user_id', 'expires_at'])
+            .executeTakeFirst(),
+        () => AppError.databaseError('Failed to create session')
+      )
+      .map(() => ({
+        sessionId,
+        payload: {
+          sub: { id: userId },
+          username,
+          role,
+        },
+      }))
+  }
+
+  validate(sessionId: string): ResultAsync<SessionPayload, AppError> {
+    return this.db
+      .query(
+        (db) =>
+          db
+            .selectFrom('sessions')
+            .innerJoin('users', 'users.id', 'sessions.user_id')
+            .select([
+              'sessions.user_id',
+              'sessions.expires_at',
+              'users.username',
+              'users.role',
+            ])
+            .where('sessions.id', '=', sessionId)
+            .executeTakeFirst(),
+        () => AppError.unauthorized('Invalid session')
+      )
+      .andThen(
+        DbService.guard(
+          AppError.databaseError('Failed to validate session')
         )
-      }
-      return ok({
-        sub: { id: session.user_id },
-        username: session.username,
-        role: session.role,
+      )
+      .andThen((session) => {
+        if (new Date(session.expires_at).valueOf() < Date.now()) {
+          return this.delete(sessionId).andThen(() =>
+            err(AppError.unauthorized('Session expired'))
+          )
+        }
+        return ok({
+          sub: { id: session.user_id },
+          username: session.username,
+          role: session.role,
+        })
       })
-    })
-}
+  }
 
-export function deleteSession(
-  db: DB,
-  sessionId: string
-): ResultAsync<void, AppError> {
-  return dbQuery(
-    db.deleteFrom('sessions').where('id', '=', sessionId).execute(),
-    () => AppError.databaseError('Failed to delete session')
-  ).map(() => undefined)
-}
+  delete(sessionId: string): ResultAsync<void, AppError> {
+    return this.db
+      .query(
+        (db) =>
+          db
+            .deleteFrom('sessions')
+            .where('id', '=', sessionId)
+            .execute(),
+        () => AppError.databaseError('Failed to delete session')
+      )
+      .map(() => undefined)
+  }
 
-export function deleteAllUserSessions(
-  db: DB,
-  userId: string
-): ResultAsync<void, AppError> {
-  return dbQuery(
-    db.deleteFrom('sessions').where('user_id', '=', userId).execute(),
-    () => AppError.databaseError('Failed to delete user sessions')
-  ).map(() => undefined)
-}
+  deleteAllForUser(userId: string): ResultAsync<void, AppError> {
+    return this.db
+      .query(
+        (db) =>
+          db
+            .deleteFrom('sessions')
+            .where('user_id', '=', userId)
+            .execute(),
+        () => AppError.databaseError('Failed to delete user sessions')
+      )
+      .map(() => undefined)
+  }
 
-export function cleanupExpiredSessions(db: DB): ResultAsync<number, AppError> {
-  return dbQuery(
-    db
-      .deleteFrom('sessions')
-      .where('expires_at', '<', new Date())
-      .executeTakeFirst(),
-    () => AppError.databaseError('Failed to cleanup expired sessions')
-  ).map((result) => Number(result.numDeletedRows))
+  cleanupExpired(): ResultAsync<number, AppError> {
+    return this.db
+      .query(
+        (db) =>
+          db
+            .deleteFrom('sessions')
+            .where('expires_at', '<', new Date())
+            .executeTakeFirst(),
+        () => AppError.databaseError('Failed to cleanup expired sessions')
+      )
+      .map((result) => Number(result.numDeletedRows))
+  }
 }

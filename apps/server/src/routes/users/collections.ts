@@ -1,10 +1,9 @@
 import { type } from 'arktype'
-import { env } from 'hono/adapter'
+import { env } from 'src/shared/env'
 import { getSignedCookie } from 'hono/cookie'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
-import { validateSession } from 'src/features/auth/session.service'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
 import {
@@ -13,19 +12,12 @@ import {
   CollectionCocktailSchema,
   CollectionCocktailPaginatedSchema,
 } from 'src/features/users/users.dto'
-import {
-  listCollections,
-  listPublicCollections,
-  getCollectionById,
-  createCollection,
-  updateCollection,
-  deleteCollection,
-  listCollectionCocktails,
-  addCocktailToCollection,
-  removeCocktailFromCollection,
-} from 'src/features/users/collections.service'
+import { collectionsService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const collectionsRoute = new HonoVar().basePath('/collections')
+const collectionsRoute = new Hono()
+  .basePath('/collections')
+  .use(provide('collections', collectionsService))
 
 collectionsRoute
   .get(
@@ -44,12 +36,11 @@ collectionsRoute
     isAuth(),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
-      const pageSize = Number(env(ctx).PAGE_SIZE)
+      const pageSize = env.PAGE_SIZE
       const payload = ctx.get('userPayload')
 
-      const result = await listCollections(db, payload.sub.id, page, pageSize)
+      const result = await ctx.get('collections').list(payload.sub.id, page, pageSize)
 
       return result.match(
         (collections) => ctx.json(collections, 200),
@@ -72,11 +63,10 @@ collectionsRoute
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
-      const pageSize = Number(env(ctx).PAGE_SIZE)
+      const pageSize = env.PAGE_SIZE
 
-      const result = await listPublicCollections(db, page, pageSize)
+      const result = await ctx.get('collections').listPublic(page, pageSize)
 
       return result.match(
         (collections) => ctx.json(collections, 200),
@@ -99,17 +89,16 @@ collectionsRoute
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
-      const { COOKIE_SECRET } = env(ctx)
+      const COOKIE_SECRET = env.COOKIE_SECRET
       const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
       let userId: string | undefined
       if (sessionId) {
-        const session = await validateSession(db, sessionId)
+        const session = await ctx.get('sessionService').validate(sessionId)
         if (session.isOk()) userId = session.value.sub.id
       }
 
-      const result = await getCollectionById(db, id, userId)
+      const result = await ctx.get('collections').getById(id, userId)
 
       return result.match(
         (collection) => ctx.json(collection, 200),
@@ -140,11 +129,10 @@ collectionsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const payload = ctx.get('userPayload')
       const { name, description, isPublic } = ctx.req.valid('json')
 
-      const result = await createCollection(db, {
+      const result = await ctx.get('collections').create({
         user_id: payload.sub.id,
         name,
         description,
@@ -181,13 +169,12 @@ collectionsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { name, description, isPublic } = ctx.req.valid('json')
 
       const payload = ctx.get('userPayload')
 
-      const result = await updateCollection(db, id, payload.sub.id, {
+      const result = await ctx.get('collections').update(id, payload.sub.id, {
         name,
         description,
         is_public: isPublic,
@@ -215,12 +202,11 @@ collectionsRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
       const payload = ctx.get('userPayload')
 
-      const result = await deleteCollection(db, id, payload.sub.id)
+      const result = await ctx.get('collections').delete(id, payload.sub.id)
 
       return result.match(
         (deletedCollection) => ctx.json(deletedCollection, 200),
@@ -244,19 +230,18 @@ collectionsRoute
     validator('param', type({ collectionId: 'string' })),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { collectionId } = ctx.req.valid('param')
       const { page = 1 } = ctx.req.valid('query')
-      const pageSize = Number(env(ctx).PAGE_SIZE)
-      const { COOKIE_SECRET } = env(ctx)
+      const pageSize = env.PAGE_SIZE
+      const COOKIE_SECRET = env.COOKIE_SECRET
       const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
       let userId: string | undefined
       if (sessionId) {
-        const session = await validateSession(db, sessionId)
+        const session = await ctx.get('sessionService').validate(sessionId)
         if (session.isOk()) userId = session.value.sub.id
       }
 
-      const result = await listCollectionCocktails(db, collectionId, page, pageSize, userId)
+      const result = await ctx.get('collections').listCocktails(collectionId, page, pageSize, userId)
 
       return result.match(
         (cocktails) => ctx.json(cocktails, 200),
@@ -286,12 +271,11 @@ collectionsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { collectionId } = ctx.req.valid('param')
       const { cocktailId } = ctx.req.valid('json')
       const payload = ctx.get('userPayload')
 
-      const result = await addCocktailToCollection(db, {
+      const result = await ctx.get('collections').addCocktail({
         collection_id: collectionId,
         cocktail_id: cocktailId,
       }, payload.sub.id)
@@ -318,11 +302,10 @@ collectionsRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await removeCocktailFromCollection(db, id, payload.sub.id)
+      const result = await ctx.get('collections').removeCocktail(id, payload.sub.id)
 
       return result.match(
         (removed) => ctx.json(removed, 200),

@@ -1,6 +1,6 @@
 import { type } from 'arktype'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
@@ -10,24 +10,11 @@ import {
   PreparationStepSchema,
   CocktailStyleJunctionSchema,
 } from 'src/features/cocktails/cocktails.dto'
-import {
-  listCocktailIngredients,
-  createCocktailIngredient,
-  updateCocktailIngredient,
-  deleteCocktailIngredient,
-  listCocktailPhotos,
-  createCocktailPhoto,
-  deleteCocktailPhoto,
-  listPreparationSteps,
-  createPreparationStep,
-  updatePreparationStep,
-  deletePreparationStep,
-  listCocktailStyleLinks,
-  addCocktailStyle,
-  removeCocktailStyle,
-} from 'src/features/cocktails/extras.service'
+import { extrasService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const extrasRoute = new HonoVar()
+const extrasRoute = new Hono()
+  .use(provide('extras', extrasService))
 
 // --- Ingredients ---
 
@@ -47,10 +34,9 @@ extrasRoute
     }),
     validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
 
-      const result = await listCocktailIngredients(db, cocktailId)
+      const result = await ctx.get('extras').listIngredients(cocktailId)
 
       return result.match(
         (items) => ctx.json(items, 200),
@@ -83,11 +69,10 @@ extrasRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
       const { ingredientId, quantity, unit, notes } = ctx.req.valid('json')
 
-      const result = await createCocktailIngredient(db, {
+      const result = await ctx.get('extras').createIngredient({
         cocktail_id: cocktailId,
         ingredient_id: ingredientId,
         quantity,
@@ -127,11 +112,10 @@ extrasRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { quantity, unit, notes } = ctx.req.valid('json')
 
-      const result = await updateCocktailIngredient(db, id, { quantity, unit, notes })
+      const result = await ctx.get('extras').updateIngredient(id, { quantity, unit, notes })
 
       return result.match(
         (item) => ctx.json(item, 200),
@@ -155,10 +139,9 @@ extrasRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteCocktailIngredient(db, id)
+      const result = await ctx.get('extras').deleteIngredient(id)
 
       return result.match(
         (item) => ctx.json(item, 200),
@@ -184,10 +167,9 @@ extrasRoute
     }),
     validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
 
-      const result = await listCocktailPhotos(db, cocktailId)
+      const result = await ctx.get('extras').listPhotos(cocktailId)
 
       return result.match(
         (items) => ctx.json(items, 200),
@@ -219,11 +201,10 @@ extrasRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
       const { url, altText, isPrimary } = ctx.req.valid('json')
 
-      const result = await createCocktailPhoto(db, {
+      const result = await ctx.get('extras').createPhoto({
         cocktail_id: cocktailId,
         url,
         alt_text: altText,
@@ -252,10 +233,9 @@ extrasRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deleteCocktailPhoto(db, id)
+      const result = await ctx.get('extras').deletePhoto(id)
 
       return result.match(
         (item) => ctx.json(item, 200),
@@ -281,10 +261,9 @@ extrasRoute
     }),
     validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
 
-      const result = await listPreparationSteps(db, cocktailId)
+      const result = await ctx.get('extras').listSteps(cocktailId)
 
       return result.match(
         (items) => ctx.json(items, 200),
@@ -316,11 +295,10 @@ extrasRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
       const { stepNumber, instruction, imageUrl } = ctx.req.valid('json')
 
-      const result = await createPreparationStep(db, {
+      const result = await ctx.get('extras').createStep({
         cocktail_id: cocktailId,
         step_number: stepNumber,
         instruction,
@@ -357,11 +335,10 @@ extrasRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { stepNumber, instruction, imageUrl } = ctx.req.valid('json')
 
-      const result = await updatePreparationStep(db, id, {
+      const result = await ctx.get('extras').updateStep(id, {
         step_number: stepNumber,
         instruction,
         image_url: imageUrl,
@@ -389,10 +366,9 @@ extrasRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deletePreparationStep(db, id)
+      const result = await ctx.get('extras').deleteStep(id)
 
       return result.match(
         (item) => ctx.json(item, 200),
@@ -418,10 +394,9 @@ extrasRoute
     }),
     validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
 
-      const result = await listCocktailStyleLinks(db, cocktailId)
+      const result = await ctx.get('extras').listStyleLinks(cocktailId)
 
       return result.match(
         (items) => ctx.json(items, 200),
@@ -451,11 +426,10 @@ extrasRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
       const { styleId } = ctx.req.valid('json')
 
-      const result = await addCocktailStyle(db, {
+      const result = await ctx.get('extras').addStyle({
         cocktail_id: cocktailId,
         style_id: styleId,
       })
@@ -482,10 +456,9 @@ extrasRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await removeCocktailStyle(db, id)
+      const result = await ctx.get('extras').removeStyle(id)
 
       return result.match(
         (item) => ctx.json(item, 200),

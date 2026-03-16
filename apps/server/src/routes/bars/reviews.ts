@@ -1,7 +1,7 @@
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
@@ -9,15 +9,11 @@ import {
   BarReviewSchema,
   BarReviewPaginatedSchema,
 } from 'src/features/bars/bars.dto'
-import {
-  listBarReviews,
-  getBarReviewById,
-  createBarReview,
-  updateBarReview,
-  deleteBarReview,
-} from 'src/features/bars/reviews.service'
+import { reviewsService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const reviewsRoute = new HonoVar()
+const reviewsRoute = new Hono()
+  .use(provide('reviews', reviewsService))
 
 reviewsRoute
   .get(
@@ -36,12 +32,11 @@ reviewsRoute
     validator('param', type({ barId: 'string' })),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { barId } = ctx.req.valid('param')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listBarReviews(db, barId, page, pageSize)
+      const result = await ctx.get('reviews').list(barId, page, pageSize)
 
       return result.match(
         (reviews) => ctx.json(reviews, 200),
@@ -72,12 +67,11 @@ reviewsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const payload = ctx.get('userPayload')
       const { barId } = ctx.req.valid('param')
       const { rating, comment } = ctx.req.valid('json')
 
-      const result = await createBarReview(db, {
+      const result = await ctx.get('reviews').create({
         bar_id: barId,
         user_id: payload.sub.id,
         rating,
@@ -107,10 +101,9 @@ reviewsRoute
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getBarReviewById(db, id)
+      const result = await ctx.get('reviews').getById(id)
 
       return result.match(
         (review) => ctx.json(review, 200),
@@ -141,12 +134,11 @@ reviewsRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { rating, comment } = ctx.req.valid('json')
       const payload = ctx.get('userPayload')
 
-      const result = await updateBarReview(db, id, payload.sub.id, { rating, comment })
+      const result = await ctx.get('reviews').update(id, payload.sub.id, { rating, comment })
 
       return result.match(
         (updatedReview) => ctx.json(updatedReview, 200),
@@ -170,11 +162,10 @@ reviewsRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
 
-      const result = await deleteBarReview(db, id, payload.sub.id)
+      const result = await ctx.get('reviews').delete(id, payload.sub.id)
 
       return result.match(
         (deletedReview) => ctx.json(deletedReview, 200),

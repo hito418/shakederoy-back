@@ -1,24 +1,20 @@
 import { type } from 'arktype'
-import { env } from 'hono/adapter'
+import { env } from 'src/shared/env'
 import { deleteCookie, getSignedCookie } from 'hono/cookie'
 import { describeRoute, resolver, validator } from 'hono-openapi'
-import { HonoVar } from 'src/shared/hono'
+import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
-import { deleteSession } from 'src/features/auth/session.service'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { errorResponses } from 'src/shared/response-schemas'
 import { SafeUserSchema, SafeUserPaginatedSchema } from 'src/features/users/users.dto'
-import {
-  listUsers,
-  getUserById,
-  createUser,
-  updateUser,
-  deleteUser,
-} from 'src/features/users/users.service'
+import { usersService } from 'src/container'
+import { provide } from 'src/shared/provide'
 import favoritesRoute from './favorites'
 import collectionsRoute from './collections'
 
-const usersRoute = new HonoVar().basePath('/users')
+const usersRoute = new Hono()
+  .basePath('/users')
+  .use(provide('users', usersService))
 
 usersRoute.get(
   '/',
@@ -35,11 +31,10 @@ usersRoute.get(
   }),
   validator('query', type({ page: 'string.numeric.parse?' })),
   async (ctx) => {
-    const db = ctx.get('database')
     const { page = 1 } = ctx.req.valid('query')
-    const pageSize = Number(env(ctx).PAGE_SIZE)
+    const pageSize = env.PAGE_SIZE
 
-    const result = await listUsers(db, page, pageSize)
+    const result = await ctx.get('users').list(page, pageSize)
 
     return result.match(
       (userList) => ctx.json(userList, 200),
@@ -64,9 +59,8 @@ usersRoute.get(
   isAuth(),
   async (ctx) => {
     const payload = ctx.get('userPayload')
-    const db = ctx.get('database')
 
-    const result = await getUserById(db, payload.sub.id)
+    const result = await ctx.get('users').getById(payload.sub.id)
 
     return result.match(
       (user) => ctx.json(user, 200),
@@ -95,10 +89,9 @@ usersRoute.get(
     })
   ),
   async (ctx) => {
-    const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
 
-    const result = await getUserById(db, id)
+    const result = await ctx.get('users').getById(id)
 
     return result.match(
       (user) => ctx.json(user, 200),
@@ -131,10 +124,9 @@ usersRoute.post(
     })
   ),
   async (ctx) => {
-    const db = ctx.get('database')
     const { username, email, password, role } = ctx.req.valid('json')
 
-    const result = await createUser(db, username, email, password, role)
+    const result = await ctx.get('users').create(username, email, password, role)
 
     return result.match(
       (user) => ctx.json(user, 201),
@@ -171,10 +163,9 @@ usersRoute.put(
   ),
   async (ctx) => {
     const payload = ctx.get('userPayload')
-    const db = ctx.get('database')
     const updateDatas = ctx.req.valid('form')
 
-    const result = await updateUser(db, payload.sub.id, updateDatas)
+    const result = await ctx.get('users').update(payload.sub.id, updateDatas)
 
     return result.match(
       (user) => ctx.json(user, 200),
@@ -217,11 +208,10 @@ usersRoute.put(
     })
   ),
   async (ctx) => {
-    const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
     const updateDatas = ctx.req.valid('form')
 
-    const result = await updateUser(db, id, updateDatas)
+    const result = await ctx.get('users').update(id, updateDatas)
 
     return result.match(
       (user) => ctx.json(user, 200),
@@ -246,10 +236,9 @@ usersRoute.delete(
   validator('param', type({ id: 'string' })),
   isAuth('admin'),
   async (ctx) => {
-    const db = ctx.get('database')
     const { id } = ctx.req.valid('param')
 
-    const result = await deleteUser(db, id)
+    const result = await ctx.get('users').delete(id)
 
     return result.match(
       (user) => ctx.json(user, 200),
@@ -274,15 +263,14 @@ usersRoute.delete(
   isAuth(),
   async (ctx) => {
     const payload = ctx.get('userPayload')
-    const db = ctx.get('database')
-    const { COOKIE_SECRET } = env(ctx)
+    const COOKIE_SECRET = env.COOKIE_SECRET
     const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
-    const result = await deleteUser(db, payload.sub.id)
+    const result = await ctx.get('users').delete(payload.sub.id)
 
     if (result.isOk()) {
       if (sessionId) {
-        await deleteSession(db, sessionId)
+        await ctx.get('sessionService').delete(sessionId)
       }
       deleteCookie(ctx, 'session_id')
     }

@@ -1,12 +1,9 @@
 import bcrypt from 'bcrypt'
-import type { Database } from '@repo/schemas'
-import { User, UserUpdate } from '@repo/schemas/users'
-import type { Kysely } from 'kysely'
-import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, dbQuery, type PaginatedResult } from 'src/shared/db-helpers'
+import type { User, UserUpdate } from '@repo/schemas/users'
+import { fromPromise, ResultAsync } from 'neverthrow'
+import { DbService, type PaginatedResult } from 'src/shared/db-service'
 import { AppError } from 'src/shared/errors'
 
-type DB = Kysely<Database>
 type SafeUser = Omit<User, 'password'>
 
 export type { SafeUser }
@@ -21,50 +18,56 @@ const safeUserColumns: (keyof SafeUser)[] = [
   'updated_at',
 ] as const
 
-export function listUsers(
-  db: DB,
-  page: number,
-  pageSize: number
-): ResultAsync<PaginatedResult<SafeUser>, AppError> {
-  return dbQueryPaginated(
-    db,
-    (trx) => trx.selectFrom('users').select((eb) => eb.fn.countAll().as('count')).execute(),
-    (trx) =>
-      trx
-        .selectFrom('users')
-        .select([...safeUserColumns])
-        .limit(pageSize)
-        .offset((page - 1) * pageSize)
-        .orderBy('updated_at', 'desc')
-        .execute(),
-    page,
-    pageSize
-  )
-}
+export class UsersService {
+  constructor(private db: DbService) {}
 
-export function getUserById(db: DB, id: string): ResultAsync<SafeUser, AppError> {
-  return dbQueryFirst(
-    () =>
-      db
-        .selectFrom('users')
-        .select([...safeUserColumns])
-        .where('id', '=', id)
-        .executeTakeFirst(),
-    AppError.notFound('User')
-  )
-}
+  list(
+    page: number,
+    pageSize: number
+  ): ResultAsync<PaginatedResult<SafeUser>, AppError> {
+    return this.db.queryPaginated(
+      (trx) =>
+        trx
+          .selectFrom('users')
+          .select((eb) => eb.fn.countAll().as('count'))
+          .execute(),
+      (trx) =>
+        trx
+          .selectFrom('users')
+          .select([...safeUserColumns])
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
+          .orderBy('updated_at', 'desc')
+          .execute(),
+      page,
+      pageSize
+    )
+  }
 
-export function createUser(
-  db: DB,
-  username: string,
-  email: string,
-  password: string,
-  role: 'admin' | 'user'
-): ResultAsync<SafeUser, AppError> {
-  return dbQuery(bcrypt.hash(password, 10), () => AppError.internalError('Failed to hash password'))
-    .andThen((hashedPassword) =>
-      dbInsert(
-        () =>
+  getById(id: string): ResultAsync<SafeUser, AppError> {
+    return this.db.queryFirst(
+      (db) =>
+        db
+          .selectFrom('users')
+          .select([...safeUserColumns])
+          .where('id', '=', id)
+          .executeTakeFirst(),
+      AppError.notFound('User')
+    )
+  }
+
+  create(
+    username: string,
+    email: string,
+    password: string,
+    role: 'admin' | 'user'
+  ): ResultAsync<SafeUser, AppError> {
+    return fromPromise(
+      bcrypt.hash(password, 10),
+      () => AppError.internalError('Failed to hash password')
+    ).andThen((hashedPassword) =>
+      this.db.insert(
+        (db) =>
           db
             .insertInto('users')
             .values({
@@ -78,43 +81,48 @@ export function createUser(
         'Failed to create user'
       )
     )
-}
+  }
 
-export function updateUser(
-  db: DB,
-  id: string,
-  data: UserUpdate
-): ResultAsync<SafeUser, AppError> {
-  const hashIfNeeded = data.password
-    ? dbQuery(bcrypt.hash(data.password, 10), () => AppError.internalError('Failed to hash password'))
-    : ResultAsync.fromSafePromise<string | undefined, AppError>(Promise.resolve(undefined))
+  update(
+    id: string,
+    data: UserUpdate
+  ): ResultAsync<SafeUser, AppError> {
+    const hashIfNeeded = data.password
+      ? fromPromise(
+          bcrypt.hash(data.password, 10),
+          () => AppError.internalError('Failed to hash password')
+        )
+      : ResultAsync.fromSafePromise<string | undefined, AppError>(
+          Promise.resolve(undefined)
+        )
 
-  return hashIfNeeded.andThen((hashedPassword) => {
-    const updateData = cleanUpdate({
-      ...data,
-      ...(hashedPassword ? { password: hashedPassword } : {}),
+    return hashIfNeeded.andThen((hashedPassword) => {
+      const updateData = DbService.cleanUpdate({
+        ...data,
+        ...(hashedPassword ? { password: hashedPassword } : {}),
+      })
+      return this.db.update(
+        (db) =>
+          db
+            .updateTable('users')
+            .set(updateData)
+            .where('id', '=', id)
+            .returning([...safeUserColumns])
+            .executeTakeFirst(),
+        AppError.notFound('User')
+      )
     })
-    return dbUpdate(
-      () =>
+  }
+
+  delete(id: string): ResultAsync<{ id: string }, AppError> {
+    return this.db.delete(
+      (db) =>
         db
-          .updateTable('users')
-          .set(updateData)
+          .deleteFrom('users')
           .where('id', '=', id)
-          .returning([...safeUserColumns])
+          .returning('id')
           .executeTakeFirst(),
       AppError.notFound('User')
     )
-  })
-}
-
-export function deleteUser(db: DB, id: string): ResultAsync<{ id: string }, AppError> {
-  return dbDelete(
-    () =>
-      db
-        .deleteFrom('users')
-        .where('id', '=', id)
-        .returning('id')
-        .executeTakeFirst(),
-    AppError.notFound('User')
-  )
+  }
 }

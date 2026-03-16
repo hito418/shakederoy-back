@@ -11,28 +11,13 @@ import {
   PartyParticipantStyleSchema,
   PartyCocktailSelectionSchema,
 } from 'src/features/parties/parties.dto'
-import {
-  listPartySessions,
-  getPartySessionById,
-  getPartySessionByCode,
-  createPartySession,
-  updatePartySession,
-  deletePartySession,
-  listPartyParticipants,
-  createPartyParticipant,
-  updatePartyParticipant,
-  deletePartyParticipant,
-  listParticipantStyles,
-  addParticipantStyle,
-  removeParticipantStyle,
-  listPartySelections,
-  createPartySelection,
-  updatePartySelection,
-  deletePartySelection,
-} from 'src/features/parties/parties.service'
 import { Hono } from 'hono'
+import { partiesService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
-const partiesRoute = new Hono().basePath('/parties')
+const partiesRoute = new Hono()
+  .basePath('/parties')
+  .use(provide('parties', partiesService))
 
 // --- Sessions ---
 
@@ -56,11 +41,10 @@ partiesRoute
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { page = 1 } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listPartySessions(db, page, pageSize)
+      const result = await ctx.get('parties').listSessions(page, pageSize)
 
       return result.match(
         (sessions) => ctx.json(sessions, 200),
@@ -86,10 +70,9 @@ partiesRoute
     }),
     validator('param', type({ code: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { code } = ctx.req.valid('param')
 
-      const result = await getPartySessionByCode(db, code)
+      const result = await ctx.get('parties').getSessionByCode(code)
 
       return result.match(
         (session) => ctx.json(session, 200),
@@ -115,10 +98,9 @@ partiesRoute
     }),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await getPartySessionById(db, id)
+      const result = await ctx.get('parties').getSessionById(id)
 
       return result.match(
         (session) => ctx.json(session, 200),
@@ -152,11 +134,10 @@ partiesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { code, name, mode } = ctx.req.valid('json')
       const payload = ctx.get('userPayload')
 
-      const result = await createPartySession(db, {
+      const result = await ctx.get('parties').createSession({
         code,
         host_id: payload.sub.id,
         name,
@@ -196,13 +177,12 @@ partiesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { name, mode, isActive } = ctx.req.valid('json')
 
       const payload = ctx.get('userPayload')
 
-      const result = await updatePartySession(db, id, payload.sub.id, {
+      const result = await ctx.get('parties').updateSession(id, payload.sub.id, {
         name,
         mode,
         is_active: isActive,
@@ -233,12 +213,11 @@ partiesRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
       const payload = ctx.get('userPayload')
 
-      const result = await deletePartySession(db, id, payload.sub.id)
+      const result = await ctx.get('parties').deleteSession(id, payload.sub.id)
 
       return result.match(
         (session) => ctx.json(session, 200),
@@ -269,10 +248,9 @@ partiesRoute
     }),
     validator('param', type({ sessionId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { sessionId } = ctx.req.valid('param')
 
-      const result = await listPartyParticipants(db, sessionId)
+      const result = await ctx.get('parties').listParticipants(sessionId)
 
       return result.match(
         (participants) => ctx.json(participants, 200),
@@ -308,12 +286,11 @@ partiesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { sessionId } = ctx.req.valid('param')
       const { userId, guestName, prefersAlcoholic, maxIntensity } =
         ctx.req.valid('json')
 
-      const result = await createPartyParticipant(db, {
+      const result = await ctx.get('parties').createParticipant({
         session_id: sessionId,
         user_id: userId,
         guest_name: guestName,
@@ -354,12 +331,11 @@ partiesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { guestName, prefersAlcoholic, maxIntensity } =
         ctx.req.valid('json')
 
-      const result = await updatePartyParticipant(db, id, {
+      const result = await ctx.get('parties').updateParticipant(id, {
         guest_name: guestName,
         prefers_alcoholic: prefersAlcoholic,
         max_intensity: maxIntensity,
@@ -390,10 +366,9 @@ partiesRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deletePartyParticipant(db, id)
+      const result = await ctx.get('parties').deleteParticipant(id)
 
       return result.match(
         (participant) => ctx.json(participant, 200),
@@ -424,10 +399,9 @@ partiesRoute
     }),
     validator('param', type({ participantId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { participantId } = ctx.req.valid('param')
 
-      const result = await listParticipantStyles(db, participantId)
+      const result = await ctx.get('parties').listParticipantStyles(participantId)
 
       return result.match(
         (styles) => ctx.json(styles, 200),
@@ -457,11 +431,10 @@ partiesRoute
     validator('param', type({ participantId: 'string' })),
     validator('json', type({ styleId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { participantId } = ctx.req.valid('param')
       const { styleId } = ctx.req.valid('json')
 
-      const result = await addParticipantStyle(db, {
+      const result = await ctx.get('parties').addParticipantStyle({
         participant_id: participantId,
         style_id: styleId,
       })
@@ -493,10 +466,9 @@ partiesRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await removeParticipantStyle(db, id)
+      const result = await ctx.get('parties').removeParticipantStyle(id)
 
       return result.match(
         (style) => ctx.json(style, 200),
@@ -527,10 +499,9 @@ partiesRoute
     }),
     validator('param', type({ sessionId: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { sessionId } = ctx.req.valid('param')
 
-      const result = await listPartySelections(db, sessionId)
+      const result = await ctx.get('parties').listSelections(sessionId)
 
       return result.match(
         (selections) => ctx.json(selections, 200),
@@ -567,11 +538,10 @@ partiesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { sessionId } = ctx.req.valid('param')
       const { cocktailId, voteCount, isSelected } = ctx.req.valid('json')
 
-      const result = await createPartySelection(db, {
+      const result = await ctx.get('parties').createSelection({
         session_id: sessionId,
         cocktail_id: cocktailId,
         vote_count: voteCount,
@@ -612,11 +582,10 @@ partiesRoute
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
       const { voteCount, isSelected } = ctx.req.valid('json')
 
-      const result = await updatePartySelection(db, id, {
+      const result = await ctx.get('parties').updateSelection(id, {
         vote_count: voteCount,
         is_selected: isSelected,
       })
@@ -648,10 +617,9 @@ partiesRoute
     isAuth(),
     validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
 
-      const result = await deletePartySelection(db, id)
+      const result = await ctx.get('parties').deleteSelection(id)
 
       return result.match(
         (selection) => ctx.json(selection, 200),

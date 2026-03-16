@@ -1,85 +1,83 @@
-import type { Database } from '@repo/schemas'
-import { Cocktail, CocktailInsert, CocktailUpdate } from '@repo/schemas/cocktails'
-import type { Kysely } from 'kysely'
-import { ResultAsync } from 'neverthrow'
-import { cleanUpdate, dbDelete, dbInsert, dbQueryFirst, dbQueryPaginated, dbUpdate, type PaginatedResult } from 'src/shared/db-helpers'
+import type { Cocktail, CocktailInsert, CocktailUpdate } from '@repo/schemas/cocktails'
+import type { ResultAsync } from 'neverthrow'
+import { DbService, type PaginatedResult } from 'src/shared/db-service'
 import { AppError } from 'src/shared/errors'
 
-type DB = Kysely<Database>
+export class CocktailsService {
+  constructor(private db: DbService) {}
 
-export function listCocktails(
-  db: DB,
-  page: number,
-  pageSize: number
-): ResultAsync<PaginatedResult<Cocktail>, AppError> {
-  return dbQueryPaginated(
-    db,
-    (trx) => trx.selectFrom('cocktails').select((eb) => eb.fn.countAll().as('count')).execute(),
-    (trx) =>
-      trx
-        .selectFrom('cocktails')
-        .selectAll()
-        .limit(pageSize)
-        .offset((page - 1) * pageSize)
-        .orderBy('updated_at', 'desc')
-        .execute(),
-    page,
-    pageSize
-  )
-}
+  list(
+    page: number,
+    pageSize: number
+  ): ResultAsync<PaginatedResult<Cocktail>, AppError> {
+    return this.db.queryPaginated(
+      (trx) =>
+        trx
+          .selectFrom('cocktails')
+          .select((eb) => eb.fn.countAll().as('count'))
+          .execute(),
+      (trx) =>
+        trx
+          .selectFrom('cocktails')
+          .selectAll()
+          .limit(pageSize)
+          .offset((page - 1) * pageSize)
+          .orderBy('updated_at', 'desc')
+          .execute(),
+      page,
+      pageSize
+    )
+  }
 
-export function getCocktailById(db: DB, id: string): ResultAsync<Cocktail, AppError> {
-  return dbQueryFirst(
-    () =>
-      db
-        .selectFrom('cocktails')
-        .selectAll()
-        .where('id', '=', id)
-        .executeTakeFirst(),
-    AppError.notFound('Cocktail')
-  )
-}
+  getById(id: string): ResultAsync<Cocktail, AppError> {
+    return this.db.queryFirst(
+      (db) =>
+        db
+          .selectFrom('cocktails')
+          .selectAll()
+          .where('id', '=', id)
+          .executeTakeFirst(),
+      AppError.notFound('Cocktail')
+    )
+  }
 
-export function createCocktail(
-  db: DB,
-  data: CocktailInsert
-): ResultAsync<Cocktail, AppError> {
-  return dbInsert(
-    () =>
-      db
-        .insertInto('cocktails')
-        .values(data)
-        .returningAll()
-        .executeTakeFirst(),
-    'Failed to create cocktail'
-  )
-}
+  create(data: CocktailInsert): ResultAsync<Cocktail, AppError> {
+    return this.db.insert(
+      (db) =>
+        db
+          .insertInto('cocktails')
+          .values(data)
+          .returningAll()
+          .executeTakeFirst(),
+      'Failed to create cocktail'
+    )
+  }
 
-export function updateCocktail(
-  db: DB,
-  id: string,
-  data: CocktailUpdate
-): ResultAsync<Cocktail, AppError> {
-  return dbUpdate(
-    () =>
-      db
-        .updateTable('cocktails')
-        .set(cleanUpdate(data))
-        .where('id', '=', id)
-        .returningAll()
-        .executeTakeFirst(),
-    AppError.notFound('Cocktail')
-  )
-}
+  update(
+    id: string,
+    data: CocktailUpdate
+  ): ResultAsync<Cocktail, AppError> {
+    return this.db.update(
+      (db) =>
+        db
+          .updateTable('cocktails')
+          .set(DbService.cleanUpdate(data))
+          .where('id', '=', id)
+          .returningAll()
+          .executeTakeFirst(),
+      AppError.notFound('Cocktail')
+    )
+  }
 
-export function deleteCocktail(db: DB, id: string): ResultAsync<Cocktail, AppError> {
-  return dbDelete(
-    () =>
-      db
-        .deleteFrom('cocktails')
-        .where('id', '=', id)
-        .returningAll()
-        .executeTakeFirst(),
-    AppError.notFound('Cocktail')
-  )
+  delete(id: string): ResultAsync<Cocktail, AppError> {
+    return this.db.delete(
+      (db) =>
+        db
+          .deleteFrom('cocktails')
+          .where('id', '=', id)
+          .returningAll()
+          .executeTakeFirst(),
+      AppError.notFound('Cocktail')
+    )
+  }
 }

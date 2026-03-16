@@ -10,15 +10,13 @@ import barsRoute from './routes/bars'
 import cocktailsRoute from './routes/cocktails'
 import partiesRoute from './routes/parties'
 import usersRoute from './routes/users'
-import { db } from './shared/db'
 import { env } from './shared/env'
 import './shared/hono'
+import { provide } from './shared/provide'
+import { sessionService } from './container'
 
 const app = new Hono()
-  .use(async (ctx, next) => {
-    ctx.set('database', db)
-    await next()
-  })
+  .use(provide('sessionService', sessionService))
   .use(
     cors({
       origin: env.CORS_ORIGIN.split(','),

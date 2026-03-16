@@ -1,6 +1,6 @@
 import type { User } from '@repo/schemas/users'
 import { getSignedCookie } from 'hono/cookie'
-import { validateSession, type SessionPayload } from './session.service'
+import type { SessionPayload } from './session.service'
 import { MiddlewareHandler } from 'hono'
 import { env } from 'src/shared/env'
 
@@ -19,8 +19,8 @@ export const isAuth: (
         return ctx.json({ message: 'Unauthorized' }, 401)
       }
 
-      const db = ctx.get('database')
-      const result = await validateSession(db, sessionId)
+      const session = ctx.get('sessionService')
+      const result = await session.validate(sessionId)
 
       if (result.isErr()) {
         return ctx.json({ message: result.error.message }, 401)
@@ -49,8 +49,8 @@ export const optionalAuth: () => MiddlewareHandler<{
     )
 
     if (sessionId) {
-      const db = ctx.get('database')
-      const result = await validateSession(db, sessionId)
+      const session = ctx.get('sessionService')
+      const result = await session.validate(sessionId)
 
       if (result.isOk()) {
         ctx.set('userPayload', result.value)
