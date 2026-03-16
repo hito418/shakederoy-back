@@ -13,6 +13,7 @@ type Ref = {
 }
 
 const STATUSES = ['draft', 'pending', 'approved', 'approved', 'approved'] as const
+const DIFFICULTIES = ['easy', 'medium', 'hard'] as const
 const UNITS = ['ml', 'oz', 'dash', 'barspoon', 'piece', 'slice', 'sprig']
 
 const STEP_TEMPLATES = [
@@ -42,12 +43,15 @@ export async function seedCocktails(trx: Kysely<Database>, refs: Ref) {
     const name = `${adjective} ${noun} ${faker.helpers.arrayElement(['Sour', 'Mule', 'Fizz', 'Collins', 'Smash', 'Punch', 'Spritz', 'Daisy'])}`
     const titleName = name.replace(/\b\w/g, (c) => c.toUpperCase())
 
+    const isAlcoholic = Math.random() > 0.3
+
     cocktailRows.push({
       name: `${titleName} #${i + 1}`,
       slug: slugify(`${name}-${i + 1}`),
       description: faker.lorem.sentence({ min: 8, max: 16 }),
+      is_alcoholic: isAlcoholic,
       intensity: faker.number.int({ min: 1, max: 5 }),
-      difficulty: faker.number.int({ min: 1, max: 5 }),
+      difficulty: faker.helpers.arrayElement(DIFFICULTIES),
       prep_time: faker.number.int({ min: 3, max: 15 }),
       glass_id: pickOne(refs.glasses).id,
       status: faker.helpers.arrayElement(STATUSES),

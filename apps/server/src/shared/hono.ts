@@ -1,13 +1,9 @@
-import { Hono, MiddlewareHandler } from 'hono'
-import { db } from './db'
+import type { SessionService } from 'src/features/auth/session.service'
+import type { SessionPayload } from 'src/features/auth/session.service'
 
-export const HonoVar = Hono<{
-  Variables: { database: typeof db }
-  Bindings: typeof process.env
-}>
-
-export type HonoVarMiddleware<T extends { [K: string]: unknown }> =
-  MiddlewareHandler<{
-    Variables: { database: typeof db } & T
-    Bindings: typeof process.env
-  }>
+declare module 'hono' {
+  export interface ContextVariableMap {
+    sessionService: SessionService
+    userPayload: SessionPayload
+  }
+}

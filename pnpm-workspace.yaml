@@ -5,5 +5,5 @@ packages:
 
 catalog:
   typescript: ^5.9.2
-  oxlint: ^1.15.0
+  oxlint: ^1.50.0
   pg: ^8.16.3

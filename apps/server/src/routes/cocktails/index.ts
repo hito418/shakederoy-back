@@ -1,21 +1,28 @@
-import { sValidator } from '@hono/standard-validator'
 import { type } from 'arktype'
 import { env } from 'hono/adapter'
-import { HonoVar } from 'src/shared/hono'
-import { isAuth } from 'src/features/auth/middleware'
+import { describeRoute, resolver, validator } from 'hono-openapi'
+import { Hono } from 'hono'
+import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
-  listCocktails,
-  getCocktailById,
-  createCocktail,
-  updateCocktail,
-  deleteCocktail,
-} from 'src/features/cocktails/service'
+  CocktailSchema,
+  CocktailPaginatedSchema,
+  CocktailFullSchema,
+} from 'src/features/cocktails/cocktails.dto'
+import type { CocktailListFilters } from 'src/features/cocktails/cocktails.service'
+import { cocktailsService } from 'src/container'
+import { provide } from 'src/shared/provide'
 import stylesRoute from './styles'
 import extrasRoute from './extras'
 import analyticsRoute from './analytics'
+import glassesRoute from './glasses'
+import alcoholTypesRoute from './alcohol-types'
+import ingredientsRoute from './ingredients'
 
-const cocktailsRoute = new HonoVar().basePath('/cocktails')
+const cocktailsRoute = new Hono()
+  .basePath('/cocktails')
+  .use(provide('cocktails', cocktailsService))
 
 function slugify(value: string): string {
   return value
@@ -30,144 +37,280 @@ function slugify(value: string): string {
 cocktailsRoute
   .get(
     '/',
-    sValidator('query', type({ page: 'string.numeric.parse?' })),
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'List cocktails',
+      description: 'Returns a paginated, filterable, and sortable list of cocktails.',
+      responses: {
+        200: {
+          description: 'Paginated list of cocktails',
+          content: {
+            'application/json': { schema: resolver(CocktailPaginatedSchema) },
+          },
+        },
+        500: errResponse('Database error'),
+      },
+    }),
+    validator(
+      'query',
+      type({
+        page: 'string.numeric.parse?',
+        'search?': 'string',
+        'sort_by?':
+          "'favorites_first'|'name_asc'|'name_desc'|'prep_time_asc'|'prep_time_desc'|'newest'|'most_popular'|'most_viewed'|'best_rated'",
+        'is_alcoholic?': "'true'|'false'",
+        'difficulty?': "'easy'|'medium'|'hard'",
+        'alcohol_type_id?': 'string',
+        'style_id?': 'string',
+        'intensity_min?': 'string.numeric.parse',
+        'intensity_max?': 'string.numeric.parse',
+        'prep_time_min?': 'string.numeric.parse',
+        'prep_time_max?': 'string.numeric.parse',
+        'ingredient_count_min?': 'string.numeric.parse',
+        'ingredient_count_max?': 'string.numeric.parse',
+        'favorites_only?': "'true'|'false'",
+        'status?': "'draft'|'pending'|'approved'|'rejected'",
+        'community?': "'true'|'false'",
+        'user_id?': 'string',
+      })
+    ),
     async (ctx) => {
-      const db = ctx.get('database')
-      const { page = 1 } = ctx.req.valid('query')
+      const query = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await listCocktails(db, page, pageSize)
+      const toBool = (v?: 'true' | 'false') =>
+        v === 'true' ? true : v === 'false' ? false : undefined
 
-      return result.match(
-        (cocktailList) => ctx.json(cocktailList, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      const filters: CocktailListFilters = {
+        search: query.search,
+        isAlcoholic: toBool(query.is_alcoholic),
+        difficulty: query.difficulty,
+        alcoholTypeId: query.alcohol_type_id,
+        styleId: query.style_id,
+        intensityMin: query.intensity_min,
+        intensityMax: query.intensity_max,
+        prepTimeMin: query.prep_time_min,
+        prepTimeMax: query.prep_time_max,
+        ingredientCountMin: query.ingredient_count_min,
+        ingredientCountMax: query.ingredient_count_max,
+        favoritesOnly: toBool(query.favorites_only) ?? undefined,
+        status: query.status,
+        community: toBool(query.community),
+        sortBy: query.sort_by,
+        userId: query.user_id,
+      }
+
+      const result = await ctx.get('cocktails').list(
+        query.page ?? 1,
+        pageSize,
+        filters
       )
+
+      return result
+        .andThen((data) => dto(CocktailPaginatedSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
-  .get('/:id', sValidator('param', type({ id: 'string' })), async (ctx) => {
-    const db = ctx.get('database')
-    const { id } = ctx.req.valid('param')
+  .get(
+    '/:id',
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Get cocktail by ID',
+      description: 'Returns full cocktail details by its ID.',
+      responses: {
+        200: {
+          description: 'Cocktail details',
+          content: {
+            'application/json': { schema: resolver(CocktailSchema) },
+          },
+        },
+        404: errResponse('Cocktail not found'),
+        500: errResponse('Database error'),
+      },
+    }),
+    validator('param', type({ id: 'string' })),
+    async (ctx) => {
+      const { id } = ctx.req.valid('param')
 
-    const result = await getCocktailById(db, id)
+      const result = await ctx.get('cocktails').getById(id)
 
-    return result.match(
-      (cocktail) => ctx.json(cocktail, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
-  })
+      return result
+        .andThen((data) => dto(CocktailSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
+    }
+  )
   .post(
     '/create',
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Create cocktail',
+      description: 'Creates a cocktail with its ingredients, preparation steps, and style in a single request. Requires authentication.',
+      responses: {
+        201: {
+          description: 'Created cocktail with relations',
+          content: {
+            'application/json': { schema: resolver(CocktailFullSchema) },
+          },
+        },
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
+      },
+    }),
     isAuth(),
-    sValidator(
+    validator(
       'json',
       type({
         name: 'string > 3',
         'slug?': 'string >= 1',
         'description?': 'string',
-        'intensity?': 'number',
-        'difficulty?': 'number',
+        isAlcoholic: 'boolean',
+        'mainAlcoholId?': 'string',
+        'difficulty?': "'easy' | 'medium' | 'hard'",
         'prepTime?': 'number',
         'glassId?': 'string',
+        'styleId?': 'string',
+        ingredients: type({
+          ingredientId: 'string',
+          'quantity?': 'string',
+          'unit?': 'string',
+        }).array(),
+        steps: 'string[]',
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const payload = ctx.get('userPayload')
-      const { name, slug, description, intensity, difficulty, prepTime, glassId } = ctx.req.valid('json')
-      const normalizedSlug = slugify(slug || name)
+      const body = ctx.req.valid('json')
 
-      const result = await createCocktail(db, {
-        name,
-        slug: normalizedSlug,
-        description,
-        intensity,
-        difficulty,
-        prep_time: prepTime,
-        glass_id: glassId,
-        created_by_id: payload.sub.id,
-        status: payload.role === 'admin' ? 'approved' : 'pending',
+      const result = await ctx.get('cocktails').createFull({
+        cocktail: {
+          name: body.name,
+          slug: body.slug,
+          description: body.description,
+          is_alcoholic: body.isAlcoholic,
+          main_alcohol_id: body.mainAlcoholId,
+          difficulty: body.difficulty,
+          prep_time: body.prepTime,
+          glass_id: body.glassId,
+          created_by_id: payload.sub.id,
+        },
+        ingredients: body.ingredients.map((i) => ({
+          ingredient_id: i.ingredientId,
+          quantity: i.quantity,
+          unit: i.unit,
+        })),
+        steps: body.steps,
+        styleId: body.styleId,
       })
 
-      return result.match(
-        (newCocktail) => ctx.json(newCocktail, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailFullSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
     '/:id',
-    isAuth('admin'),
-    sValidator('param', type({ id: 'string' })),
-    sValidator(
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Update cocktail',
+      description: 'Updates cocktail details. Requires authentication.',
+      responses: {
+        200: {
+          description: 'Updated cocktail',
+          content: {
+            'application/json': { schema: resolver(CocktailSchema) },
+          },
+        },
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail not found'),
+        500: errResponse('Database error'),
+      },
+    }),
+    isAuth(),
+    validator('param', type({ id: 'string' })),
+    validator(
       'json',
       type({
         'name?': 'string > 3',
         'slug?': 'string >= 1',
         'description?': 'string',
-        'intensity?': 'number',
-        'difficulty?': 'number',
+        'isAlcoholic?': 'boolean',
+        'mainAlcoholId?': 'string | null',
+        'difficulty?': "'easy' | 'medium' | 'hard'",
         'prepTime?': 'number',
         'glassId?': 'string',
         'status?': "'draft' | 'pending' | 'approved' | 'rejected'",
       })
     ),
     async (ctx) => {
-      const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
-      const { name, slug, description, intensity, difficulty, prepTime, glassId, status } = ctx.req.valid('json')
+      const body = ctx.req.valid('json')
 
-      const result = await updateCocktail(db, id, {
-        name,
-        slug,
-        description,
-        intensity,
-        difficulty,
-        prep_time: prepTime,
-        glass_id: glassId,
-        status,
+      const result = await ctx.get('cocktails').update(id, {
+        name: body.name,
+        slug: body.slug,
+        description: body.description,
+        is_alcoholic: body.isAlcoholic,
+        main_alcohol_id: body.mainAlcoholId,
+        difficulty: body.difficulty,
+        prep_time: body.prepTime,
+        glass_id: body.glassId,
       })
 
-      return result.match(
-        (updatedCocktail) => ctx.json(updatedCocktail, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
     '/:id',
+    describeRoute({
+      tags: ['Cocktails'],
+      summary: 'Delete cocktail',
+      description: 'Deletes a cocktail by its ID. Requires authentication.',
+      responses: {
+        200: {
+          description: 'Deleted cocktail',
+          content: {
+            'application/json': { schema: resolver(CocktailSchema) },
+          },
+        },
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail not found'),
+        500: errResponse('Database error'),
+      },
+    }),
     isAuth(),
-    sValidator('param', type({ id: 'string' })),
+    validator('param', type({ id: 'string' })),
     async (ctx) => {
-      const db = ctx.get('database')
-      const payload = ctx.get('userPayload')
       const { id } = ctx.req.valid('param')
 
-      const cocktailResult = await getCocktailById(db, id)
+      const result = await ctx.get('cocktails').delete(id)
 
-      if (cocktailResult.isErr()) {
-        const error = cocktailResult.error
-        return ctx.json({ message: error.message }, errorToHttpStatus(error))
-      }
-
-      const cocktail = cocktailResult.value
-      const canDelete =
-        payload.role === 'admin' ||
-        (cocktail.created_by_id === payload.sub.id && cocktail.status === 'pending')
-
-      if (!canDelete) {
-        return ctx.json({ message: 'Forbidden' }, 403)
-      }
-
-      const result = await deleteCocktail(db, id)
-
-      return result.match(
-        (deletedCocktail) => ctx.json(deletedCocktail, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .route('/styles', stylesRoute)
   .route('/', extrasRoute)
   .route('/', analyticsRoute)
+  .route('/', glassesRoute)
+  .route('/', alcoholTypesRoute)
+  .route('/', ingredientsRoute)
 
 export default cocktailsRoute

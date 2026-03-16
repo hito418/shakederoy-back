@@ -1,8 +1,9 @@
 import type { Kyselify } from 'drizzle-orm/kysely'
-import { integer, pgTable, text, uuid } from 'drizzle-orm/pg-core'
+import { boolean, integer, pgTable, text, uuid } from 'drizzle-orm/pg-core'
 import type { Insertable, Selectable, Updateable } from 'kysely'
+import { alcoholTypes } from './alcohol-types'
 import { bars } from './bars'
-import { cocktailStatusEnum } from '../shared/enums'
+import { cocktailDifficultyEnum, cocktailStatusEnum } from '../shared/enums'
 import { glasses } from './glasses'
 import { users } from './users'
 import { deletedAt, timestamps } from '../shared/timestamps'
@@ -12,8 +13,12 @@ export const cocktails = pgTable('cocktails', {
   name: text('name').unique().notNull(),
   slug: text('slug').unique().notNull(),
   description: text('description'),
+  isAlcoholic: boolean('is_alcoholic').notNull().default(false),
+  mainAlcoholId: uuid('main_alcohol_id').references(() => alcoholTypes.id, {
+    onDelete: 'set null',
+  }),
   intensity: integer('intensity'),
-  difficulty: integer('difficulty'),
+  difficulty: cocktailDifficultyEnum('difficulty'),
   prepTime: integer('prep_time'),
   glassId: uuid('glass_id').references(() => glasses.id, {
     onDelete: 'set null',

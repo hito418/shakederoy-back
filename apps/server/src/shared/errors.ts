@@ -1,39 +1,50 @@
 import type { ContentfulStatusCode } from 'hono/utils/http-status'
 
-export type AppError =
-  | { type: 'NOT_FOUND'; message: string }
-  | { type: 'ALREADY_EXISTS'; message: string }
-  | { type: 'UNAUTHORIZED'; message: string }
-  | { type: 'INVALID_CREDENTIALS'; message: string }
-  | { type: 'DATABASE_ERROR'; message: string }
-  | { type: 'INTERNAL_ERROR'; message: string }
+export type AppErrorType =
+  | 'NOT_FOUND'
+  | 'ALREADY_EXISTS'
+  | 'UNAUTHORIZED'
+  | 'INVALID_CREDENTIALS'
+  | 'DATABASE_ERROR'
+  | 'INTERNAL_ERROR'
 
-export const Errors = {
-  notFound: (resource: string): AppError => ({
-    type: 'NOT_FOUND',
-    message: `${resource} not found`,
-  }),
-  alreadyExists: (resource: string): AppError => ({
-    type: 'ALREADY_EXISTS',
-    message: `${resource} already exists`,
-  }),
-  unauthorized: (message = 'Unauthorized'): AppError => ({
-    type: 'UNAUTHORIZED',
-    message,
-  }),
-  invalidCredentials: (message = 'Invalid credentials'): AppError => ({
-    type: 'INVALID_CREDENTIALS',
-    message,
-  }),
-  databaseError: (message = 'Database operation failed'): AppError => ({
-    type: 'DATABASE_ERROR',
-    message,
-  }),
-  internalError: (message = 'Internal server error'): AppError => ({
-    type: 'INTERNAL_ERROR',
-    message,
-  }),
-} as const
+export class AppError extends Error {
+  constructor(
+    public readonly type: AppErrorType,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'AppError'
+  }
+
+  static notFound(resource: string) {
+    return new AppError('NOT_FOUND', `${resource} not found`)
+  }
+
+  static alreadyExists(resource: string) {
+    return new AppError('ALREADY_EXISTS', `${resource} already exists`)
+  }
+
+  static unauthorized(message = 'Unauthorized') {
+    return new AppError('UNAUTHORIZED', message)
+  }
+  
+  static invalidCredentials(message = 'Invalid credentials') {
+    return new AppError('INVALID_CREDENTIALS', message)
+  }
+
+  static databaseError(message = 'Database operation failed') {
+    return new AppError('DATABASE_ERROR', message)
+  }
+
+  static internalError(message = 'Internal server error') {
+    return new AppError('INTERNAL_ERROR', message)
+  }
+}
+
+export function isAppError(value: unknown): value is AppError {
+  return value instanceof AppError
+}
 
 export function errorToHttpStatus(error: AppError): ContentfulStatusCode {
   switch (error.type) {

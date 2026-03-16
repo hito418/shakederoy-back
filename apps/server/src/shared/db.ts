@@ -1,16 +1,17 @@
+import type { Database } from '@repo/schemas'
 import { Kysely, PostgresDialect } from 'kysely'
 import pkg from 'pg'
-import type { Database } from '@repo/schemas'
+import { env } from './env'
 
 const { Pool } = pkg
 
 const dialect = new PostgresDialect({
   pool: new Pool({
-    database: process.env.PG_DB,
-    host: process.env.PG_HOST,
-    user: process.env.PG_USER,
-    password: process.env.PG_PASSWORD,
-    port: parseInt(process.env.PG_PORT, 10),
+    database: env.PG_DB,
+    host: env.PG_HOST,
+    user: env.PG_USER,
+    password: env.PG_PASSWORD,
+    port: env.PG_PORT,
     max: 10,
   }),
 })

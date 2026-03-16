@@ -30,6 +30,12 @@ export const partyModeEnum = pgEnum('party_mode', [
   'random',
 ])
 
+export const cocktailDifficultyEnum = pgEnum('cocktail_difficulty', [
+  'easy',
+  'medium',
+  'hard',
+])
+
 export const ingredientCategoryEnum = pgEnum('ingredient_category', [
   'spirit',
   'liqueur',

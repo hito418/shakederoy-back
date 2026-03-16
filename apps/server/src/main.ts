@@ -1,65 +1,57 @@
 import { serve } from '@hono/node-server'
-import { env } from 'hono/adapter'
+import { Scalar } from '@scalar/hono-api-reference'
+import { Hono } from 'hono'
+import { openAPIRouteHandler } from 'hono-openapi'
 import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
-import { db } from './shared/db'
-import './shared/env'
-import { HonoVar } from './shared/hono'
+import './config/arktype'
 import authRoute from './routes/auth'
-import cocktailsRoute from './routes/cocktails'
-import usersRoute from './routes/users'
-import glassesRoute from './routes/glasses'
-import alcoholTypesRoute from './routes/alcohol-types'
-import ingredientsRoute from './routes/ingredients'
 import barsRoute from './routes/bars'
-import collectionsRoute from './routes/collections'
+import cocktailsRoute from './routes/cocktails'
 import partiesRoute from './routes/parties'
-import { openAPIRouteHandler } from 'hono-openapi'
-// import seedDb from './lib/seed'
+import usersRoute from './routes/users'
+import { env } from './shared/env'
+import './shared/hono'
+import { provide } from './shared/provide'
+import { sessionService } from './container'
 
-if (process?.env?.NODE_ENV === 'DEV') {
-  try {
-    // await seedDb()
-  } catch {}
-}
-
-const app = new HonoVar()
-  .use(async (ctx, next) => {
-    ctx.set('database', db)
-    await next()
-  })
+const app = new Hono()
+  .use(provide('sessionService', sessionService))
   .use(
     cors({
-      origin: (_, ctx) => env(ctx)['CORS_ORIGIN'],
+      origin: env.CORS_ORIGIN.split(','),
       credentials: true,
     })
   )
   .route('/', authRoute)
   .route('/', usersRoute)
   .route('/', cocktailsRoute)
-  .route('/', glassesRoute)
-  .route('/', alcoholTypesRoute)
-  .route('/', ingredientsRoute)
   .route('/', barsRoute)
-  .route('/', collectionsRoute)
   .route('/', partiesRoute)
   .get('/healthcheck', (ctx) => {
     return ctx.json({ status: 'ok' }, 200)
   })
-  
-app.get(
-  "/openapi.json",
-  openAPIRouteHandler(app, {
-    includeEmptyPaths: true,
-    documentation: {
-      info: {
-        title: "ShakeDeRoy",
-        version: "1.0.0",
-        description: "shakederoy API",
+
+app
+  .get(
+    '/openapi.json',
+    openAPIRouteHandler(app, {
+      documentation: {
+        info: {
+          title: 'ShakeDeRoy',
+          version: '1.0.0',
+          description: 'shakederoy API',
+        },
       },
-    },
-  }),
-);
+    })
+  )
+  .get(
+    '/docs',
+    Scalar({
+      theme: 'saturn',
+      url: '/openapi.json',
+    })
+  )
 
 if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
   showRoutes(app)
@@ -68,7 +60,7 @@ if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
 const server = serve(
   {
     fetch: app.fetch,
-    port: Number(process.env.APP_PORT) || 3000,
+    port: env.APP_PORT,
   },
   (info) => console.log(`Listening on http://localhost:${info.port}`)
 )

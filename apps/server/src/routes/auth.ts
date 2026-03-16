@@ -1,25 +1,46 @@
-import { sValidator } from '@hono/standard-validator'
 import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
-import { isAuth } from 'src/features/auth/middleware'
-import { initAdmin, registerUser, loginUser } from 'src/features/auth/service'
-import { createSession, validateSession, deleteSession } from 'src/features/auth/session-service'
-import { env } from 'hono/adapter'
+import { describeRoute, resolver, validator } from 'hono-openapi'
+import { Hono } from 'hono'
+import { isAuth } from 'src/features/auth/auth.middleware'
+import {
+  SafeUserSchema,
+  SessionPayloadSchema,
+} from 'src/features/auth/auth.dto'
 import { type } from 'arktype'
-import { HonoVar } from 'src/shared/hono'
+import { env } from 'src/shared/env'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import { errorToHttpStatus } from 'src/shared/errors'
+import { authService } from 'src/container'
+import { provide } from 'src/shared/provide'
 
 const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV !== 'DEV',
-  sameSite: process.env.NODE_ENV === 'STAGING' ? 'None' as const : 'Lax' as const,
+  secure: env.NODE_ENV !== 'DEV',
+  sameSite: env.NODE_ENV === 'STAGING' ? ('None' as const) : ('Lax' as const),
   path: '/',
 }
 
-const authRoute = new HonoVar()
+const authRoute = new Hono()
   .basePath('/auth')
+  .use(provide('auth', authService))
   .post(
     '/init',
-    sValidator(
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Initialize admin account',
+      description:
+        'Creates the first admin account. Can only be used when no admin exists yet.',
+      hide: true,
+      responses: {
+        201: {
+          description: 'Admin account created',
+          content: { 'application/json': { schema: resolver(SafeUserSchema) } },
+        },
+        409: errResponse('Admin account has already been initialized'),
+        500: errResponse('Database or internal server error'),
+      },
+    }),
+    validator(
       'json',
       type({
         username: 'string >= 3',
@@ -29,19 +50,36 @@ const authRoute = new HonoVar()
     ),
     async (ctx) => {
       const { username, email, password } = ctx.req.valid('json')
-      const db = ctx.get('database')
 
-      const result = await initAdmin(db, username, email, password)
+      const result = await ctx.get('auth').initAdmin(username, email, password)
 
-      return result.match(
-        (user) => ctx.json(user, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((user) => dto(SafeUserSchema, user))
+        .match(
+          (user) => ctx.json(user, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
     '/register',
-    sValidator(
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Register',
+      description:
+        'Creates a new user account and starts a session. Sets a signed session cookie on success.',
+      responses: {
+        201: {
+          description: 'User registered and session created',
+          content: {
+            'application/json': { schema: resolver(SessionPayloadSchema) },
+          },
+        },
+        500: errResponse('Database or internal server error'),
+      },
+    }),
+    validator(
       'json',
       type({
         username: 'string >= 3',
@@ -51,29 +89,61 @@ const authRoute = new HonoVar()
     ),
     async (ctx) => {
       const { username, email, password } = ctx.req.valid('json')
-      const db = ctx.get('database')
-      const { COOKIE_SECRET } = env(ctx)
+      const COOKIE_SECRET = env.COOKIE_SECRET
 
-      const result = await registerUser(db, username, email, password)
+      const result = await ctx
+        .get('auth')
+        .registerUser(username, email, password)
         .andThen((credentials) =>
-          createSession(db, credentials.id, credentials.username, credentials.role)
+          ctx
+            .get('sessionService')
+            .create(credentials.id, credentials.username, credentials.role)
         )
 
       if (result.isErr()) {
-        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
+        return ctx.json(
+          { message: result.error.message },
+          errorToHttpStatus(result.error)
+        )
       }
 
       const { sessionId, payload } = result.value
-      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
+      await setSignedCookie(
+        ctx,
+        'session_id',
+        sessionId,
+        COOKIE_SECRET,
+        SESSION_COOKIE_OPTIONS
+      )
 
-      return ctx.json(payload, 201)
+      return dto(SessionPayloadSchema, payload).match(
+        (data) => ctx.json(data, 201),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
   .post(
     '/login',
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Login',
+      description:
+        'Authenticates with credential (username or email) and password. Returns the existing session if a valid cookie is already present.',
+      responses: {
+        200: {
+          description: 'Logged in and session created',
+          content: {
+            'application/json': { schema: resolver(SessionPayloadSchema) },
+          },
+        },
+        401: errResponse('Invalid credentials'),
+        404: errResponse('User not found'),
+        500: errResponse('Database or internal server error'),
+      },
+    }),
     async (ctx, next) => {
-      const { COOKIE_SECRET } = env(ctx)
-      const db = ctx.get('database')
+      const COOKIE_SECRET = env.COOKIE_SECRET
       const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
       if (!sessionId) {
@@ -81,16 +151,20 @@ const authRoute = new HonoVar()
         return
       }
 
-      const result = await validateSession(db, sessionId)
+      const result = await ctx.get('sessionService').validate(sessionId)
 
       if (result.isErr()) {
         await next()
         return
       }
 
-      return ctx.json(result.value, 200)
+      return dto(SessionPayloadSchema, result.value).match(
+        (data) => ctx.json(data, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     },
-    sValidator(
+    validator(
       'json',
       type({
         credential: 'string',
@@ -99,35 +173,64 @@ const authRoute = new HonoVar()
     ),
     async (ctx) => {
       const { credential, password } = ctx.req.valid('json')
-      const db = ctx.get('database')
-      const { COOKIE_SECRET } = env(ctx)
+      const COOKIE_SECRET = env.COOKIE_SECRET
 
-      const result = await loginUser(db, credential, password)
+      const result = await ctx
+        .get('auth')
+        .loginUser(credential, password)
         .andThen((credentials) =>
-          createSession(db, credentials.id, credentials.username, credentials.role)
+          ctx
+            .get('sessionService')
+            .create(credentials.id, credentials.username, credentials.role)
         )
 
       if (result.isErr()) {
-        return ctx.json({ message: result.error.message }, errorToHttpStatus(result.error))
+        return ctx.json(
+          { message: result.error.message },
+          errorToHttpStatus(result.error)
+        )
       }
 
       const { sessionId, payload } = result.value
-      await setSignedCookie(ctx, 'session_id', sessionId, COOKIE_SECRET, SESSION_COOKIE_OPTIONS)
+      await setSignedCookie(
+        ctx,
+        'session_id',
+        sessionId,
+        COOKIE_SECRET,
+        SESSION_COOKIE_OPTIONS
+      )
 
-      return ctx.json(payload, 200)
+      return dto(SessionPayloadSchema, payload).match(
+        (data) => ctx.json(data, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
-  .get('/logout', isAuth(), async (ctx) => {
-    const { COOKIE_SECRET } = env(ctx)
-    const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
+  .get(
+    '/logout',
+    describeRoute({
+      tags: ['Auth'],
+      summary: 'Logout',
+      description:
+        'Destroys the current session and clears the session cookie. Requires authentication.',
+      responses: {
+        200: { description: 'Logged out' },
+        401: errResponse('Missing or invalid session cookie'),
+      },
+    }),
+    isAuth(),
+    async (ctx) => {
+      const COOKIE_SECRET = env.COOKIE_SECRET
+      const sessionId = await getSignedCookie(ctx, COOKIE_SECRET, 'session_id')
 
-    if (sessionId) {
-      const db = ctx.get('database')
-      await deleteSession(db, sessionId)
+      if (sessionId) {
+        await ctx.get('sessionService').delete(sessionId)
+      }
+
+      deleteCookie(ctx, 'session_id')
+      return ctx.json({ success: true }, 200)
     }
-
-    deleteCookie(ctx, 'session_id')
-    return ctx.json({ success: true }, 200)
-  })
+  )
 
 export default authRoute
