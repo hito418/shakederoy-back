@@ -7,8 +7,10 @@ export const CocktailSchema = type({
   name: 'string',
   slug: 'string',
   'description?': 'string | null',
+  is_alcoholic: 'boolean',
+  'main_alcohol_id?': 'string | null',
   'intensity?': 'number | null',
-  'difficulty?': 'number | null',
+  'difficulty?': "'easy' | 'medium' | 'hard' | null",
   'prep_time?': 'number | null',
   'glass_id?': 'string | null',
   status: "'draft' | 'pending' | 'approved' | 'rejected'",
@@ -107,6 +109,19 @@ export const CocktailStyleJunctionSchema = type({
   ...timestamps,
 })
 
+export const CocktailFullSchema = type({
+  ...strip,
+  cocktail: CocktailSchema,
+  ingredients: CocktailIngredientSchema.array(),
+  steps: PreparationStepSchema.array(),
+  'style?': CocktailStyleJunctionSchema.or('null'),
+})
+
+export const CocktailIngredientListSchema = CocktailIngredientSchema.array()
+export const CocktailPhotoListSchema = CocktailPhotoSchema.array()
+export const PreparationStepListSchema = PreparationStepSchema.array()
+export const CocktailStyleJunctionListSchema = CocktailStyleJunctionSchema.array()
+
 export const CocktailVoteSchema = type({
   ...strip,
   id: 'string',
@@ -141,3 +156,5 @@ export const CocktailOfMonthSchema = type({
   rank: 'number',
   ...timestamps,
 })
+
+export const CocktailOfMonthListSchema = CocktailOfMonthSchema.array()

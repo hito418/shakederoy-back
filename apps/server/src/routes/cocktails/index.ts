@@ -4,10 +4,11 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   CocktailSchema,
   CocktailPaginatedSchema,
+  CocktailFullSchema,
 } from 'src/features/cocktails/cocktails.dto'
 import { cocktailsService } from 'src/container'
 import { provide } from 'src/shared/provide'
@@ -36,7 +37,7 @@ cocktailsRoute
             'application/json': { schema: resolver(CocktailPaginatedSchema) },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
@@ -46,10 +47,12 @@ cocktailsRoute
 
       const result = await ctx.get('cocktails').list(page, pageSize)
 
-      return result.match(
-        (cocktailList) => ctx.json(cocktailList, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailPaginatedSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -65,7 +68,8 @@ cocktailsRoute
             'application/json': { schema: resolver(CocktailSchema) },
           },
         },
-        ...errorResponses,
+        404: errResponse('Cocktail not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -74,10 +78,12 @@ cocktailsRoute
 
       const result = await ctx.get('cocktails').getById(id)
 
-      return result.match(
-        (cocktail) => ctx.json(cocktail, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -85,15 +91,16 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'Create cocktail',
-      description: 'Creates a new cocktail with optional attributes like intensity, difficulty, and glass type. Requires authentication.',
+      description: 'Creates a cocktail with its ingredients, preparation steps, and style in a single request. Requires authentication.',
       responses: {
         201: {
-          description: 'Created cocktail',
+          description: 'Created cocktail with relations',
           content: {
-            'application/json': { schema: resolver(CocktailSchema) },
+            'application/json': { schema: resolver(CocktailFullSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -103,32 +110,51 @@ cocktailsRoute
         name: 'string > 3',
         slug: 'string >= 1',
         'description?': 'string',
-        'intensity?': 'number',
-        'difficulty?': 'number',
+        isAlcoholic: 'boolean',
+        'mainAlcoholId?': 'string',
+        'difficulty?': "'easy' | 'medium' | 'hard'",
         'prepTime?': 'number',
         'glassId?': 'string',
+        'styleId?': 'string',
+        ingredients: type({
+          ingredientId: 'string',
+          'quantity?': 'string',
+          'unit?': 'string',
+        }).array(),
+        steps: 'string[]',
       })
     ),
     async (ctx) => {
       const payload = ctx.get('userPayload')
-      const { name, slug, description, intensity, difficulty, prepTime, glassId } =
-        ctx.req.valid('json')
+      const body = ctx.req.valid('json')
 
-      const result = await ctx.get('cocktails').create({
-        name,
-        slug,
-        description,
-        intensity,
-        difficulty,
-        prep_time: prepTime,
-        glass_id: glassId,
-        created_by_id: payload.sub.id,
+      const result = await ctx.get('cocktails').createFull({
+        cocktail: {
+          name: body.name,
+          slug: body.slug,
+          description: body.description,
+          is_alcoholic: body.isAlcoholic,
+          main_alcohol_id: body.mainAlcoholId,
+          difficulty: body.difficulty,
+          prep_time: body.prepTime,
+          glass_id: body.glassId,
+          created_by_id: payload.sub.id,
+        },
+        ingredients: body.ingredients.map((i) => ({
+          ingredient_id: i.ingredientId,
+          quantity: i.quantity,
+          unit: i.unit,
+        })),
+        steps: body.steps,
+        styleId: body.styleId,
       })
 
-      return result.match(
-        (newCocktail) => ctx.json(newCocktail, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailFullSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -144,7 +170,9 @@ cocktailsRoute
             'application/json': { schema: resolver(CocktailSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -155,31 +183,34 @@ cocktailsRoute
         'name?': 'string > 3',
         'slug?': 'string >= 1',
         'description?': 'string',
-        'intensity?': 'number',
-        'difficulty?': 'number',
+        'isAlcoholic?': 'boolean',
+        'mainAlcoholId?': 'string | null',
+        'difficulty?': "'easy' | 'medium' | 'hard'",
         'prepTime?': 'number',
         'glassId?': 'string',
       })
     ),
     async (ctx) => {
       const { id } = ctx.req.valid('param')
-      const { name, slug, description, intensity, difficulty, prepTime, glassId } =
-        ctx.req.valid('json')
+      const body = ctx.req.valid('json')
 
       const result = await ctx.get('cocktails').update(id, {
-        name,
-        slug,
-        description,
-        intensity,
-        difficulty,
-        prep_time: prepTime,
-        glass_id: glassId,
+        name: body.name,
+        slug: body.slug,
+        description: body.description,
+        is_alcoholic: body.isAlcoholic,
+        main_alcohol_id: body.mainAlcoholId,
+        difficulty: body.difficulty,
+        prep_time: body.prepTime,
+        glass_id: body.glassId,
       })
 
-      return result.match(
-        (updatedCocktail) => ctx.json(updatedCocktail, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -195,7 +226,9 @@ cocktailsRoute
             'application/json': { schema: resolver(CocktailSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -205,10 +238,12 @@ cocktailsRoute
 
       const result = await ctx.get('cocktails').delete(id)
 
-      return result.match(
-        (deletedCocktail) => ctx.json(deletedCocktail, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .route('/styles', stylesRoute)
