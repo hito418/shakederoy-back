@@ -135,11 +135,28 @@ cocktailsRoute
   )
   .delete(
     '/:id',
-    isAuth('admin'),
+    isAuth(),
     sValidator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')
+      const payload = ctx.get('userPayload')
       const { id } = ctx.req.valid('param')
+
+      const cocktailResult = await getCocktailById(db, id)
+
+      if (cocktailResult.isErr()) {
+        const error = cocktailResult.error
+        return ctx.json({ message: error.message }, errorToHttpStatus(error))
+      }
+
+      const cocktail = cocktailResult.value
+      const canDelete =
+        payload.role === 'admin' ||
+        (cocktail.created_by_id === payload.sub.id && cocktail.status === 'pending')
+
+      if (!canDelete) {
+        return ctx.json({ message: 'Forbidden' }, 403)
+      }
 
       const result = await deleteCocktail(db, id)
 
