@@ -56,7 +56,9 @@ export function dto<T extends type.Any>(
 ): Result<T['infer'], AppError> {
   const out = schema(data)
   if (out instanceof type.errors) {
-    return err(AppError.internalError(`Response schema mismatch: ${out.summary}`))
+    return err(
+      AppError.internalError(`Response schema mismatch: ${out.summary}`)
+    )
   }
   return ok(out)
 }
