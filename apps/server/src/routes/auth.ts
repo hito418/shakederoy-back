@@ -127,7 +127,7 @@ const authRoute = new HonoVar()
     }
 
     deleteCookie(ctx, 'session_id')
-    return ctx.text('Logged out', 200)
+    return ctx.json({ success: true }, 200)
   })
 
 export default authRoute

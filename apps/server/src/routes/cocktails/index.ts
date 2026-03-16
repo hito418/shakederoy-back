@@ -17,6 +17,16 @@ import analyticsRoute from './analytics'
 
 const cocktailsRoute = new HonoVar().basePath('/cocktails')
 
+function slugify(value: string): string {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
 cocktailsRoute
   .get(
     '/',
@@ -52,7 +62,7 @@ cocktailsRoute
       'json',
       type({
         name: 'string > 3',
-        slug: 'string >= 1',
+        'slug?': 'string >= 1',
         'description?': 'string',
         'intensity?': 'number',
         'difficulty?': 'number',
@@ -64,16 +74,18 @@ cocktailsRoute
       const db = ctx.get('database')
       const payload = ctx.get('userPayload')
       const { name, slug, description, intensity, difficulty, prepTime, glassId } = ctx.req.valid('json')
+      const normalizedSlug = slugify(slug || name)
 
       const result = await createCocktail(db, {
         name,
-        slug,
+        slug: normalizedSlug,
         description,
         intensity,
         difficulty,
         prep_time: prepTime,
         glass_id: glassId,
         created_by_id: payload.sub.id,
+        status: payload.role === 'admin' ? 'approved' : 'pending',
       })
 
       return result.match(
@@ -84,7 +96,7 @@ cocktailsRoute
   )
   .put(
     '/:id',
-    isAuth(),
+    isAuth('admin'),
     sValidator('param', type({ id: 'string' })),
     sValidator(
       'json',
@@ -96,12 +108,13 @@ cocktailsRoute
         'difficulty?': 'number',
         'prepTime?': 'number',
         'glassId?': 'string',
+        'status?': "'draft' | 'pending' | 'approved' | 'rejected'",
       })
     ),
     async (ctx) => {
       const db = ctx.get('database')
       const { id } = ctx.req.valid('param')
-      const { name, slug, description, intensity, difficulty, prepTime, glassId } = ctx.req.valid('json')
+      const { name, slug, description, intensity, difficulty, prepTime, glassId, status } = ctx.req.valid('json')
 
       const result = await updateCocktail(db, id, {
         name,
@@ -111,6 +124,7 @@ cocktailsRoute
         difficulty,
         prep_time: prepTime,
         glass_id: glassId,
+        status,
       })
 
       return result.match(
@@ -121,7 +135,7 @@ cocktailsRoute
   )
   .delete(
     '/:id',
-    isAuth(),
+    isAuth('admin'),
     sValidator('param', type({ id: 'string' })),
     async (ctx) => {
       const db = ctx.get('database')

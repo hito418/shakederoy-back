@@ -19,32 +19,77 @@ export function listCocktailIngredients(
   return dbQueryMany(() =>
     db
       .selectFrom('cocktail_ingredients')
-      .selectAll()
-      .where('cocktail_id', '=', cocktailId)
-      .orderBy('created_at', 'asc')
+      .innerJoin('ingredients', 'ingredients.id', 'cocktail_ingredients.ingredient_id')
+      .select([
+        'cocktail_ingredients.id',
+        'cocktail_ingredients.cocktail_id',
+        'cocktail_ingredients.ingredient_id',
+        'cocktail_ingredients.quantity',
+        'cocktail_ingredients.unit',
+        'cocktail_ingredients.notes',
+        'cocktail_ingredients.created_at',
+        'cocktail_ingredients.updated_at',
+        'ingredients.name as ingredient_name',
+      ])
+      .where('cocktail_ingredients.cocktail_id', '=', cocktailId)
+      .orderBy('cocktail_ingredients.created_at', 'asc')
       .execute()
   )
 }
 
 export function createCocktailIngredient(
   db: DB,
-  data: CocktailIngredientInsert
+  data: CocktailIngredientInsert & { ingredient_name?: string }
 ): ResultAsync<CocktailIngredient, AppError> {
-  return dbInsert(
-    () =>
-      db
-        .insertInto('cocktail_ingredients')
-        .values({
-          cocktail_id: data.cocktail_id,
-          ingredient_id: data.ingredient_id,
-          quantity: data.quantity,
-          unit: data.unit,
-          notes: data.notes,
-        })
-        .returningAll()
-        .executeTakeFirst(),
-    'Failed to create cocktail ingredient'
-  )
+  return dbInsert(async () => {
+    let ingredientId = data.ingredient_id
+
+    if (!ingredientId && data.ingredient_name) {
+      const normalizedName = data.ingredient_name.trim()
+
+      if (!normalizedName) {
+        return undefined
+      }
+
+      const existingIngredient = await db
+        .selectFrom('ingredients')
+        .select(['id'])
+        .where('name', '=', normalizedName)
+        .executeTakeFirst()
+
+      if (existingIngredient) {
+        ingredientId = existingIngredient.id
+      } else {
+        const createdIngredient = await db
+          .insertInto('ingredients')
+          .values({
+            name: normalizedName,
+            category: 'other',
+            is_alcoholic: false,
+          })
+          .returning(['id'])
+          .executeTakeFirst()
+
+        ingredientId = createdIngredient?.id
+      }
+    }
+
+    if (!ingredientId) {
+      return undefined
+    }
+
+    return db
+      .insertInto('cocktail_ingredients')
+      .values({
+        cocktail_id: data.cocktail_id,
+        ingredient_id: ingredientId,
+        quantity: data.quantity,
+        unit: data.unit,
+        notes: data.notes,
+      })
+      .returningAll()
+      .executeTakeFirst()
+  }, 'Failed to create cocktail ingredient')
 }
 
 export function updateCocktailIngredient(

@@ -47,7 +47,8 @@ extrasRoute
     sValidator(
       'json',
       type({
-        ingredientId: 'string',
+        'ingredientId?': 'string',
+        'ingredientName?': 'string >= 1',
         quantity: 'string?',
         unit: 'string?',
         notes: 'string?',
@@ -56,11 +57,12 @@ extrasRoute
     async (ctx) => {
       const db = ctx.get('database')
       const { cocktailId } = ctx.req.valid('param')
-      const { ingredientId, quantity, unit, notes } = ctx.req.valid('json')
+      const { ingredientId, ingredientName, quantity, unit, notes } = ctx.req.valid('json')
 
       const result = await createCocktailIngredient(db, {
         cocktail_id: cocktailId,
         ingredient_id: ingredientId,
+        ingredient_name: ingredientName,
         quantity,
         unit,
         notes,
