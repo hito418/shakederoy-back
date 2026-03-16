@@ -11,7 +11,7 @@ import { errorToHttpStatus } from 'src/shared/errors'
 const SESSION_COOKIE_OPTIONS = {
   httpOnly: true,
   secure: process.env.NODE_ENV !== 'DEV',
-  sameSite: 'Lax' as const,
+  sameSite: process.env.NODE_ENV === 'STAGING' ? 'None' as const : 'Lax' as const,
   path: '/',
 }
 
