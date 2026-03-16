@@ -10,6 +10,7 @@ import {
   CocktailPaginatedSchema,
   CocktailFullSchema,
 } from 'src/features/cocktails/cocktails.dto'
+import type { CocktailListFilters } from 'src/features/cocktails/cocktails.service'
 import { cocktailsService } from 'src/container'
 import { provide } from 'src/shared/provide'
 import stylesRoute from './styles'
@@ -29,7 +30,7 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'List cocktails',
-      description: 'Returns a paginated list of all cocktails.',
+      description: 'Returns a paginated, filterable, and sortable list of cocktails.',
       responses: {
         200: {
           description: 'Paginated list of cocktails',
@@ -40,12 +41,60 @@ cocktailsRoute
         500: errResponse('Database error'),
       },
     }),
-    validator('query', type({ page: 'string.numeric.parse?' })),
+    validator(
+      'query',
+      type({
+        page: 'string.numeric.parse?',
+        'search?': 'string',
+        'sort_by?':
+          "'favorites_first'|'name_asc'|'name_desc'|'prep_time_asc'|'prep_time_desc'|'newest'|'most_popular'|'most_viewed'|'best_rated'",
+        'is_alcoholic?': "'true'|'false'",
+        'difficulty?': "'easy'|'medium'|'hard'",
+        'alcohol_type_id?': 'string',
+        'style_id?': 'string',
+        'intensity_min?': 'string.numeric.parse',
+        'intensity_max?': 'string.numeric.parse',
+        'prep_time_min?': 'string.numeric.parse',
+        'prep_time_max?': 'string.numeric.parse',
+        'ingredient_count_min?': 'string.numeric.parse',
+        'ingredient_count_max?': 'string.numeric.parse',
+        'favorites_only?': "'true'|'false'",
+        'status?': "'draft'|'pending'|'approved'|'rejected'",
+        'community?': "'true'|'false'",
+        'user_id?': 'string',
+      })
+    ),
     async (ctx) => {
-      const { page = 1 } = ctx.req.valid('query')
+      const query = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await ctx.get('cocktails').list(page, pageSize)
+      const toBool = (v?: 'true' | 'false') =>
+        v === 'true' ? true : v === 'false' ? false : undefined
+
+      const filters: CocktailListFilters = {
+        search: query.search,
+        isAlcoholic: toBool(query.is_alcoholic),
+        difficulty: query.difficulty,
+        alcoholTypeId: query.alcohol_type_id,
+        styleId: query.style_id,
+        intensityMin: query.intensity_min,
+        intensityMax: query.intensity_max,
+        prepTimeMin: query.prep_time_min,
+        prepTimeMax: query.prep_time_max,
+        ingredientCountMin: query.ingredient_count_min,
+        ingredientCountMax: query.ingredient_count_max,
+        favoritesOnly: toBool(query.favorites_only) ?? undefined,
+        status: query.status,
+        community: toBool(query.community),
+        sortBy: query.sort_by,
+        userId: query.user_id,
+      }
+
+      const result = await ctx.get('cocktails').list(
+        query.page ?? 1,
+        pageSize,
+        filters
+      )
 
       return result
         .andThen((data) => dto(CocktailPaginatedSchema, data))
