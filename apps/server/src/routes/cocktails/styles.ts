@@ -4,7 +4,7 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   CocktailStyleSchema,
   CocktailStylePaginatedSchema,
@@ -31,7 +31,7 @@ stylesRoute
             },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
@@ -41,11 +41,13 @@ stylesRoute
 
       const result = await ctx.get('styles').list(page, pageSize)
 
-      return result.match(
-        (styleList) => ctx.json(styleList, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStylePaginatedSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -61,7 +63,8 @@ stylesRoute
             'application/json': { schema: resolver(CocktailStyleSchema) },
           },
         },
-        ...errorResponses,
+        404: errResponse('Cocktail style not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -70,11 +73,13 @@ stylesRoute
 
       const result = await ctx.get('styles').getById(id)
 
-      return result.match(
-        (style) => ctx.json(style, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStyleSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -90,7 +95,8 @@ stylesRoute
             'application/json': { schema: resolver(CocktailStyleSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -106,11 +112,13 @@ stylesRoute
 
       const result = await ctx.get('styles').create({ name, description })
 
-      return result.match(
-        (newStyle) => ctx.json(newStyle, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStyleSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -126,7 +134,9 @@ stylesRoute
             'application/json': { schema: resolver(CocktailStyleSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Cocktail style not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -146,11 +156,13 @@ stylesRoute
         .get('styles')
         .update(id, { name, description })
 
-      return result.match(
-        (updatedStyle) => ctx.json(updatedStyle, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStyleSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -166,7 +178,9 @@ stylesRoute
             'application/json': { schema: resolver(CocktailStyleSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Cocktail style not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -176,11 +190,13 @@ stylesRoute
 
       const result = await ctx.get('styles').delete(id)
 
-      return result.match(
-        (deletedStyle) => ctx.json(deletedStyle, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStyleSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

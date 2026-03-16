@@ -5,7 +5,7 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   CollectionSchema,
   CollectionPaginatedSchema,
@@ -31,7 +31,8 @@ collectionsRoute
           description: 'Paginated list of collections',
           content: { 'application/json': { schema: resolver(CollectionPaginatedSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -43,10 +44,12 @@ collectionsRoute
 
       const result = await ctx.get('collections').list(payload.sub.id, page, pageSize)
 
-      return result.match(
-        (collections) => ctx.json(collections, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((collections) => dto(CollectionPaginatedSchema, collections))
+        .match(
+          (collections) => ctx.json(collections, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -60,7 +63,7 @@ collectionsRoute
           description: 'Paginated list of public collections',
           content: { 'application/json': { schema: resolver(CollectionPaginatedSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
@@ -70,10 +73,12 @@ collectionsRoute
 
       const result = await ctx.get('collections').listPublic(page, pageSize)
 
-      return result.match(
-        (collections) => ctx.json(collections, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((collections) => dto(CollectionPaginatedSchema, collections))
+        .match(
+          (collections) => ctx.json(collections, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -87,7 +92,8 @@ collectionsRoute
           description: 'Collection found',
           content: { 'application/json': { schema: resolver(CollectionSchema) } },
         },
-        ...errorResponses,
+        404: errResponse('Collection not found or not accessible'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -103,10 +109,12 @@ collectionsRoute
 
       const result = await ctx.get('collections').getById(id, userId)
 
-      return result.match(
-        (collection) => ctx.json(collection, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((collection) => dto(CollectionSchema, collection))
+        .match(
+          (collection) => ctx.json(collection, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -120,7 +128,8 @@ collectionsRoute
           description: 'Collection created',
           content: { 'application/json': { schema: resolver(CollectionSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -143,10 +152,12 @@ collectionsRoute
         is_public: isPublic,
       })
 
-      return result.match(
-        (newCollection) => ctx.json(newCollection, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((newCollection) => dto(CollectionSchema, newCollection))
+        .match(
+          (newCollection) => ctx.json(newCollection, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -160,7 +171,9 @@ collectionsRoute
           description: 'Collection updated',
           content: { 'application/json': { schema: resolver(CollectionSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Collection not found or not owned by current user'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -185,10 +198,12 @@ collectionsRoute
         is_public: isPublic,
       })
 
-      return result.match(
-        (updatedCollection) => ctx.json(updatedCollection, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((updatedCollection) => dto(CollectionSchema, updatedCollection))
+        .match(
+          (updatedCollection) => ctx.json(updatedCollection, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -202,7 +217,9 @@ collectionsRoute
           description: 'Collection deleted',
           content: { 'application/json': { schema: resolver(CollectionSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Collection not found or not owned by current user'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -214,10 +231,12 @@ collectionsRoute
 
       const result = await ctx.get('collections').delete(id, payload.sub.id)
 
-      return result.match(
-        (deletedCollection) => ctx.json(deletedCollection, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((deletedCollection) => dto(CollectionSchema, deletedCollection))
+        .match(
+          (deletedCollection) => ctx.json(deletedCollection, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -231,7 +250,8 @@ collectionsRoute
           description: 'Paginated list of collection cocktails',
           content: { 'application/json': { schema: resolver(CollectionCocktailPaginatedSchema) } },
         },
-        ...errorResponses,
+        404: errResponse('Collection not found or not accessible'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ collectionId: 'string' })),
@@ -250,10 +270,12 @@ collectionsRoute
 
       const result = await ctx.get('collections').listCocktails(collectionId, page, pageSize, userId)
 
-      return result.match(
-        (cocktails) => ctx.json(cocktails, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((cocktails) => dto(CollectionCocktailPaginatedSchema, cocktails))
+        .match(
+          (cocktails) => ctx.json(cocktails, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -267,7 +289,8 @@ collectionsRoute
           description: 'Cocktail added to collection',
           content: { 'application/json': { schema: resolver(CollectionCocktailSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Collection not found or not owned, or database error'),
       },
     }),
     isAuth(),
@@ -288,10 +311,12 @@ collectionsRoute
         cocktail_id: cocktailId,
       }, payload.sub.id)
 
-      return result.match(
-        (added) => ctx.json(added, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((added) => dto(CollectionCocktailSchema, added))
+        .match(
+          (added) => ctx.json(added, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -305,7 +330,9 @@ collectionsRoute
           description: 'Cocktail removed from collection',
           content: { 'application/json': { schema: resolver(CollectionCocktailSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Collection cocktail not found or not owned by current user'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -316,10 +343,12 @@ collectionsRoute
 
       const result = await ctx.get('collections').removeCocktail(id, payload.sub.id)
 
-      return result.match(
-        (removed) => ctx.json(removed, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((removed) => dto(CollectionCocktailSchema, removed))
+        .match(
+          (removed) => ctx.json(removed, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

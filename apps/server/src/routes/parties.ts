@@ -3,13 +3,16 @@ import { env } from 'hono/adapter'
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   PartySessionSchema,
   PartySessionPaginatedSchema,
   PartyParticipantSchema,
+  PartyParticipantListSchema,
   PartyParticipantStyleSchema,
+  PartyParticipantStyleListSchema,
   PartyCocktailSelectionSchema,
+  PartyCocktailSelectionListSchema,
 } from 'src/features/parties/parties.dto'
 import { Hono } from 'hono'
 import { partiesService } from 'src/container'
@@ -37,7 +40,7 @@ partiesRoute
             },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
@@ -47,11 +50,13 @@ partiesRoute
 
       const result = await ctx.get('parties').listSessions(page, pageSize)
 
-      return result.match(
-        (sessions) => ctx.json(sessions, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartySessionPaginatedSchema, data))
+        .match(
+          (sessions) => ctx.json(sessions, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -67,7 +72,8 @@ partiesRoute
             'application/json': { schema: resolver(PartySessionSchema) },
           },
         },
-        ...errorResponses,
+        404: errResponse('Party session not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ code: 'string' })),
@@ -76,11 +82,13 @@ partiesRoute
 
       const result = await ctx.get('parties').getSessionByCode(code)
 
-      return result.match(
-        (session) => ctx.json(session, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartySessionSchema, data))
+        .match(
+          (session) => ctx.json(session, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -96,7 +104,8 @@ partiesRoute
             'application/json': { schema: resolver(PartySessionSchema) },
           },
         },
-        ...errorResponses,
+        404: errResponse('Party session not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -105,11 +114,13 @@ partiesRoute
 
       const result = await ctx.get('parties').getSessionById(id)
 
-      return result.match(
-        (session) => ctx.json(session, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartySessionSchema, data))
+        .match(
+          (session) => ctx.json(session, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -125,7 +136,8 @@ partiesRoute
             'application/json': { schema: resolver(PartySessionSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -148,11 +160,13 @@ partiesRoute
         mode,
       })
 
-      return result.match(
-        (session) => ctx.json(session, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartySessionSchema, data))
+        .match(
+          (session) => ctx.json(session, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -168,7 +182,9 @@ partiesRoute
             'application/json': { schema: resolver(PartySessionSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party session not found or not owned by current user'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -193,11 +209,13 @@ partiesRoute
         is_active: isActive,
       })
 
-      return result.match(
-        (session) => ctx.json(session, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartySessionSchema, data))
+        .match(
+          (session) => ctx.json(session, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -213,7 +231,9 @@ partiesRoute
             'application/json': { schema: resolver(PartySessionSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party session not found or not owned by current user'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -225,11 +245,13 @@ partiesRoute
 
       const result = await ctx.get('parties').deleteSession(id, payload.sub.id)
 
-      return result.match(
-        (session) => ctx.json(session, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartySessionSchema, data))
+        .match(
+          (session) => ctx.json(session, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -246,11 +268,11 @@ partiesRoute
           description: 'List of party participants',
           content: {
             'application/json': {
-              schema: resolver(PartyParticipantSchema.array()),
+              schema: resolver(PartyParticipantListSchema),
             },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ sessionId: 'string' })),
@@ -259,11 +281,13 @@ partiesRoute
 
       const result = await ctx.get('parties').listParticipants(sessionId)
 
-      return result.match(
-        (participants) => ctx.json(participants, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyParticipantListSchema, data))
+        .match(
+          (participants) => ctx.json(participants, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -279,7 +303,8 @@ partiesRoute
             'application/json': { schema: resolver(PartyParticipantSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -306,11 +331,13 @@ partiesRoute
         max_intensity: maxIntensity,
       })
 
-      return result.match(
-        (participant) => ctx.json(participant, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyParticipantSchema, data))
+        .match(
+          (participant) => ctx.json(participant, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -326,7 +353,9 @@ partiesRoute
             'application/json': { schema: resolver(PartyParticipantSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party participant not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -350,11 +379,13 @@ partiesRoute
         max_intensity: maxIntensity,
       })
 
-      return result.match(
-        (participant) => ctx.json(participant, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyParticipantSchema, data))
+        .match(
+          (participant) => ctx.json(participant, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -370,7 +401,9 @@ partiesRoute
             'application/json': { schema: resolver(PartyParticipantSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party participant not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -380,11 +413,13 @@ partiesRoute
 
       const result = await ctx.get('parties').deleteParticipant(id)
 
-      return result.match(
-        (participant) => ctx.json(participant, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyParticipantSchema, data))
+        .match(
+          (participant) => ctx.json(participant, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -401,11 +436,11 @@ partiesRoute
           description: 'List of participant styles',
           content: {
             'application/json': {
-              schema: resolver(PartyParticipantStyleSchema.array()),
+              schema: resolver(PartyParticipantStyleListSchema),
             },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ participantId: 'string' })),
@@ -414,11 +449,13 @@ partiesRoute
 
       const result = await ctx.get('parties').listParticipantStyles(participantId)
 
-      return result.match(
-        (styles) => ctx.json(styles, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyParticipantStyleListSchema, data))
+        .match(
+          (styles) => ctx.json(styles, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -436,7 +473,8 @@ partiesRoute
             },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -451,11 +489,13 @@ partiesRoute
         style_id: styleId,
       })
 
-      return result.match(
-        (style) => ctx.json(style, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyParticipantStyleSchema, data))
+        .match(
+          (style) => ctx.json(style, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -473,7 +513,9 @@ partiesRoute
             },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Participant style not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -483,11 +525,13 @@ partiesRoute
 
       const result = await ctx.get('parties').removeParticipantStyle(id)
 
-      return result.match(
-        (style) => ctx.json(style, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyParticipantStyleSchema, data))
+        .match(
+          (style) => ctx.json(style, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -504,11 +548,11 @@ partiesRoute
           description: 'List of party selections',
           content: {
             'application/json': {
-              schema: resolver(PartyCocktailSelectionSchema.array()),
+              schema: resolver(PartyCocktailSelectionListSchema),
             },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ sessionId: 'string' })),
@@ -517,11 +561,13 @@ partiesRoute
 
       const result = await ctx.get('parties').listSelections(sessionId)
 
-      return result.match(
-        (selections) => ctx.json(selections, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyCocktailSelectionListSchema, data))
+        .match(
+          (selections) => ctx.json(selections, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -539,7 +585,8 @@ partiesRoute
             },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -563,11 +610,13 @@ partiesRoute
         is_selected: isSelected,
       })
 
-      return result.match(
-        (selection) => ctx.json(selection, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyCocktailSelectionSchema, data))
+        .match(
+          (selection) => ctx.json(selection, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -585,7 +634,9 @@ partiesRoute
             },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party selection not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -606,11 +657,13 @@ partiesRoute
         is_selected: isSelected,
       })
 
-      return result.match(
-        (selection) => ctx.json(selection, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyCocktailSelectionSchema, data))
+        .match(
+          (selection) => ctx.json(selection, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -628,7 +681,9 @@ partiesRoute
             },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party selection not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -638,11 +693,13 @@ partiesRoute
 
       const result = await ctx.get('parties').deleteSelection(id)
 
-      return result.match(
-        (selection) => ctx.json(selection, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PartyCocktailSelectionSchema, data))
+        .match(
+          (selection) => ctx.json(selection, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

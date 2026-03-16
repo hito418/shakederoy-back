@@ -1,5 +1,7 @@
 import { type } from 'arktype'
 import { resolver } from 'hono-openapi'
+import { Result, ok, err } from 'neverthrow'
+import { AppError } from 'src/shared/errors'
 
 export const timestamps = {
   created_at: 'string',
@@ -22,17 +24,17 @@ type ErrorResponseEntry = {
   content: { 'application/json': { schema: object } }
 }
 
-const err = (description: string): ErrorResponseEntry => ({
+export const errResponse = (description: string): ErrorResponseEntry => ({
   description,
   content: { 'application/json': { schema: resolver(ErrorSchema) } },
 })
 
 export const errorResponses: Record<401 | 404 | 409 | 500, ErrorResponseEntry> =
   {
-    401: err('Unauthorized'),
-    404: err('Not found'),
-    409: err('Already exists'),
-    500: err('Internal server error'),
+    401: errResponse('Unauthorized'),
+    404: errResponse('Not found'),
+    409: errResponse('Already exists'),
+    500: errResponse('Internal server error'),
   }
 
 export { strip }
@@ -46,4 +48,15 @@ export function paginatedSchema<t>(itemType: type.Any<t>) {
     total: 'number',
     totalPages: 'number',
   })
+}
+
+export function dto<T extends type.Any>(
+  schema: T,
+  data: unknown
+): Result<T['infer'], AppError> {
+  const out = schema(data)
+  if (out instanceof type.errors) {
+    return err(AppError.internalError(`Response schema mismatch: ${out.summary}`))
+  }
+  return ok(out)
 }

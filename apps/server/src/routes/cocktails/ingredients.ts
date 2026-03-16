@@ -4,7 +4,7 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   IngredientSchema,
   IngredientPaginatedSchema,
@@ -30,7 +30,7 @@ ingredientsRoute
             'application/json': { schema: resolver(IngredientPaginatedSchema) },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
@@ -40,11 +40,13 @@ ingredientsRoute
 
       const result = await ctx.get('ingredients').list(page, pageSize)
 
-      return result.match(
-        (ingredientList) => ctx.json(ingredientList, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(IngredientPaginatedSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -60,7 +62,8 @@ ingredientsRoute
             'application/json': { schema: resolver(IngredientSchema) },
           },
         },
-        ...errorResponses,
+        404: errResponse('Ingredient not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -69,11 +72,13 @@ ingredientsRoute
 
       const result = await ctx.get('ingredients').getById(id)
 
-      return result.match(
-        (ingredient) => ctx.json(ingredient, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(IngredientSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -89,7 +94,8 @@ ingredientsRoute
             'application/json': { schema: resolver(IngredientSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -124,11 +130,13 @@ ingredientsRoute
         image_url: imageUrl,
       })
 
-      return result.match(
-        (newIngredient) => ctx.json(newIngredient, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(IngredientSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -144,7 +152,9 @@ ingredientsRoute
             'application/json': { schema: resolver(IngredientSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Ingredient not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -181,11 +191,13 @@ ingredientsRoute
         image_url: imageUrl,
       })
 
-      return result.match(
-        (updatedIngredient) => ctx.json(updatedIngredient, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(IngredientSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -201,7 +213,9 @@ ingredientsRoute
             'application/json': { schema: resolver(IngredientSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Ingredient not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -211,11 +225,13 @@ ingredientsRoute
 
       const result = await ctx.get('ingredients').delete(id)
 
-      return result.match(
-        (deletedIngredient) => ctx.json(deletedIngredient, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(IngredientSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

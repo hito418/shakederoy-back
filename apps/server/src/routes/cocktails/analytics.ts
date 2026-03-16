@@ -4,13 +4,14 @@ import { env } from 'hono/adapter'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   CocktailVoteSchema,
   CocktailVotePaginatedSchema,
   CocktailViewSchema,
   CocktailViewPaginatedSchema,
   CocktailOfMonthSchema,
+  CocktailOfMonthListSchema,
 } from 'src/features/cocktails/cocktails.dto'
 import { analyticsService } from 'src/container'
 import { provide } from 'src/shared/provide'
@@ -32,7 +33,7 @@ analyticsRoute
           description: 'Paginated list of cocktail votes',
           content: { 'application/json': { schema: resolver(CocktailVotePaginatedSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ cocktailId: 'string' })),
@@ -44,10 +45,12 @@ analyticsRoute
 
       const result = await ctx.get('analytics').listVotes(cocktailId, page, pageSize)
 
-      return result.match(
-        (votes) => ctx.json(votes, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailVotePaginatedSchema, data))
+        .match(
+          (votes) => ctx.json(votes, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -61,7 +64,8 @@ analyticsRoute
           description: 'Cocktail vote recorded',
           content: { 'application/json': { schema: resolver(CocktailVoteSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -79,10 +83,12 @@ analyticsRoute
 
       const result = await ctx.get('analytics').vote(cocktailId, payload.sub.id, voteType)
 
-      return result.match(
-        (vote) => ctx.json(vote, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailVoteSchema, data))
+        .match(
+          (vote) => ctx.json(vote, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -96,7 +102,9 @@ analyticsRoute
           description: 'Deleted cocktail vote',
           content: { 'application/json': { schema: resolver(CocktailVoteSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Vote not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -107,10 +115,12 @@ analyticsRoute
 
       const result = await ctx.get('analytics').deleteVote(id, payload.sub.id)
 
-      return result.match(
-        (vote) => ctx.json(vote, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailVoteSchema, data))
+        .match(
+          (vote) => ctx.json(vote, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -128,7 +138,8 @@ analyticsRoute
           description: 'Paginated list of cocktail views',
           content: { 'application/json': { schema: resolver(CocktailViewPaginatedSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -141,10 +152,12 @@ analyticsRoute
 
       const result = await ctx.get('analytics').listViews(cocktailId, page, pageSize)
 
-      return result.match(
-        (views) => ctx.json(views, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailViewPaginatedSchema, data))
+        .match(
+          (views) => ctx.json(views, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -158,7 +171,7 @@ analyticsRoute
           description: 'Cocktail view recorded',
           content: { 'application/json': { schema: resolver(CocktailViewSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ cocktailId: 'string' })),
@@ -180,10 +193,12 @@ analyticsRoute
         day_of_week: dayOfWeek,
       })
 
-      return result.match(
-        (view) => ctx.json(view, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailViewSchema, data))
+        .match(
+          (view) => ctx.json(view, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -199,9 +214,9 @@ analyticsRoute
       responses: {
         200: {
           description: 'List of cocktails of the month',
-          content: { 'application/json': { schema: resolver(CocktailOfMonthSchema.array()) } },
+          content: { 'application/json': { schema: resolver(CocktailOfMonthListSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator(
@@ -213,10 +228,12 @@ analyticsRoute
 
       const result = await ctx.get('analytics').listOfMonth(year, month)
 
-      return result.match(
-        (entries) => ctx.json(entries, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailOfMonthListSchema, data))
+        .match(
+          (entries) => ctx.json(entries, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -230,7 +247,8 @@ analyticsRoute
           description: 'Cocktail of the month entry',
           content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
         },
-        ...errorResponses,
+        404: errResponse('Cocktail of the month entry not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -239,10 +257,12 @@ analyticsRoute
 
       const result = await ctx.get('analytics').getOfMonthById(id)
 
-      return result.match(
-        (entry) => ctx.json(entry, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailOfMonthSchema, data))
+        .match(
+          (entry) => ctx.json(entry, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -256,7 +276,8 @@ analyticsRoute
           description: 'Cocktail of the month created',
           content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -279,10 +300,12 @@ analyticsRoute
         rank,
       })
 
-      return result.match(
-        (entry) => ctx.json(entry, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailOfMonthSchema, data))
+        .match(
+          (entry) => ctx.json(entry, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -296,7 +319,9 @@ analyticsRoute
           description: 'Updated cocktail of the month',
           content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Cocktail of the month entry not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -321,10 +346,12 @@ analyticsRoute
         rank,
       })
 
-      return result.match(
-        (entry) => ctx.json(entry, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailOfMonthSchema, data))
+        .match(
+          (entry) => ctx.json(entry, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -338,7 +365,9 @@ analyticsRoute
           description: 'Deleted cocktail of the month',
           content: { 'application/json': { schema: resolver(CocktailOfMonthSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Cocktail of the month entry not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -348,10 +377,12 @@ analyticsRoute
 
       const result = await ctx.get('analytics').deleteOfMonth(id)
 
-      return result.match(
-        (entry) => ctx.json(entry, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailOfMonthSchema, data))
+        .match(
+          (entry) => ctx.json(entry, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

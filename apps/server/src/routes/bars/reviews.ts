@@ -4,7 +4,7 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   BarReviewSchema,
   BarReviewPaginatedSchema,
@@ -27,7 +27,7 @@ reviewsRoute
           description: 'Paginated list of bar reviews',
           content: { 'application/json': { schema: resolver(BarReviewPaginatedSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ barId: 'string' })),
@@ -39,10 +39,12 @@ reviewsRoute
 
       const result = await ctx.get('reviews').list(barId, page, pageSize)
 
-      return result.match(
-        (reviews) => ctx.json(reviews, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((reviews) => dto(BarReviewPaginatedSchema, reviews))
+        .match(
+          (reviews) => ctx.json(reviews, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -56,7 +58,8 @@ reviewsRoute
           description: 'Created bar review',
           content: { 'application/json': { schema: resolver(BarReviewSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -80,10 +83,12 @@ reviewsRoute
         comment,
       })
 
-      return result.match(
-        (newReview) => ctx.json(newReview, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((newReview) => dto(BarReviewSchema, newReview))
+        .match(
+          (newReview) => ctx.json(newReview, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -99,7 +104,7 @@ reviewsRoute
           description: 'Bar review details',
           content: { 'application/json': { schema: resolver(BarReviewSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -108,10 +113,12 @@ reviewsRoute
 
       const result = await ctx.get('reviews').getById(id)
 
-      return result.match(
-        (review) => ctx.json(review, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((review) => dto(BarReviewSchema, review))
+        .match(
+          (review) => ctx.json(review, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -125,7 +132,8 @@ reviewsRoute
           description: 'Updated bar review',
           content: { 'application/json': { schema: resolver(BarReviewSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -144,10 +152,12 @@ reviewsRoute
 
       const result = await ctx.get('reviews').update(id, payload.sub.id, { rating, comment })
 
-      return result.match(
-        (updatedReview) => ctx.json(updatedReview, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((updatedReview) => dto(BarReviewSchema, updatedReview))
+        .match(
+          (updatedReview) => ctx.json(updatedReview, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -161,7 +171,8 @@ reviewsRoute
           description: 'Deleted bar review',
           content: { 'application/json': { schema: resolver(BarReviewSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -172,10 +183,12 @@ reviewsRoute
 
       const result = await ctx.get('reviews').delete(id, payload.sub.id)
 
-      return result.match(
-        (deletedReview) => ctx.json(deletedReview, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((deletedReview) => dto(BarReviewSchema, deletedReview))
+        .match(
+          (deletedReview) => ctx.json(deletedReview, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

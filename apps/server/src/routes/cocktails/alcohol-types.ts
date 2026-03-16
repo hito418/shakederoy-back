@@ -4,7 +4,7 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import { AlcoholTypeSchema, AlcoholTypePaginatedSchema } from 'src/features/cocktails/cocktails.dto'
 import { alcoholTypesService } from 'src/container'
 import { provide } from 'src/shared/provide'
@@ -25,7 +25,7 @@ alcoholTypesRoute
           description: 'Paginated list of alcohol types',
           content: { 'application/json': { schema: resolver(AlcoholTypePaginatedSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
@@ -35,10 +35,12 @@ alcoholTypesRoute
 
       const result = await ctx.get('alcoholTypes').list(page, pageSize)
 
-      return result.match(
-        (alcoholTypeList) => ctx.json(alcoholTypeList, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error)),
-      )
+      return result
+        .andThen((data) => dto(AlcoholTypePaginatedSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error)),
+        )
     }
   )
   .get(
@@ -52,7 +54,8 @@ alcoholTypesRoute
           description: 'Alcohol type details',
           content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
         },
-        ...errorResponses,
+        404: errResponse('Alcohol type not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -61,10 +64,12 @@ alcoholTypesRoute
 
       const result = await ctx.get('alcoholTypes').getById(id)
 
-      return result.match(
-        (alcoholType) => ctx.json(alcoholType, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(AlcoholTypeSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -78,7 +83,8 @@ alcoholTypesRoute
           description: 'Created alcohol type',
           content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -101,10 +107,12 @@ alcoholTypesRoute
         abv_range_max: abvRangeMax,
       })
 
-      return result.match(
-        (newAlcoholType) => ctx.json(newAlcoholType, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(AlcoholTypeSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -118,7 +126,9 @@ alcoholTypesRoute
           description: 'Updated alcohol type',
           content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Alcohol type not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -143,10 +153,12 @@ alcoholTypesRoute
         abv_range_max: abvRangeMax,
       })
 
-      return result.match(
-        (updatedAlcoholType) => ctx.json(updatedAlcoholType, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(AlcoholTypeSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -160,7 +172,9 @@ alcoholTypesRoute
           description: 'Deleted alcohol type',
           content: { 'application/json': { schema: resolver(AlcoholTypeSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Alcohol type not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -170,10 +184,12 @@ alcoholTypesRoute
 
       const result = await ctx.get('alcoholTypes').delete(id)
 
-      return result.match(
-        (deletedAlcoholType) => ctx.json(deletedAlcoholType, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(AlcoholTypeSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

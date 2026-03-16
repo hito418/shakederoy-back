@@ -10,10 +10,12 @@ import {
   BarListPaginatedSchema,
   BarListQuerySchema,
   BarPhotoSchema,
+  BarPhotoListSchema,
   BarSignatureCocktailSchema,
+  BarSignatureCocktailListSchema,
 } from 'src/features/bars/bars.dto'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import { barsService } from 'src/container'
 import { provide } from 'src/shared/provide'
 import reviewsRoute from './reviews'
@@ -38,7 +40,7 @@ barsRoute
             'application/json': { schema: resolver(BarListPaginatedSchema) },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', BarListQuerySchema),
@@ -48,11 +50,13 @@ barsRoute
 
       const result = await ctx.get('bars').list(page, pageSize, { city, style, search })
 
-      return result.match(
-        (bars) => ctx.json(bars, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((bars) => dto(BarListPaginatedSchema, bars))
+        .match(
+          (bars) => ctx.json(bars, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -68,7 +72,8 @@ barsRoute
             'application/json': { schema: resolver(BarDetailSchema) },
           },
         },
-        ...errorResponses,
+        404: errResponse('Bar not found'),
+        500: errResponse('Database error'),
       },
     }),
     optionalAuth(),
@@ -82,11 +87,13 @@ barsRoute
         payload?.sub.id ?? null
       )
 
-      return result.match(
-        (bar) => ctx.json(bar, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((bar) => dto(BarDetailSchema, bar))
+        .match(
+          (bar) => ctx.json(bar, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -102,7 +109,8 @@ barsRoute
             'application/json': { schema: resolver(BarDetailSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -152,11 +160,13 @@ barsRoute
         data.photos
       )
 
-      return result.match(
-        (bar) => ctx.json(bar, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((bar) => dto(BarDetailSchema, bar))
+        .match(
+          (bar) => ctx.json(bar, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -172,7 +182,8 @@ barsRoute
             'application/json': { schema: resolver(BarDetailSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -202,11 +213,13 @@ barsRoute
 
       const result = await ctx.get('bars').update(id, payload.sub.id, data)
 
-      return result.match(
-        (bar) => ctx.json(bar, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((bar) => dto(BarDetailSchema, bar))
+        .match(
+          (bar) => ctx.json(bar, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -222,7 +235,9 @@ barsRoute
             'application/json': { schema: resolver(BarDetailSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Bar not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -233,11 +248,13 @@ barsRoute
 
       const result = await ctx.get('bars').delete(id, payload.sub.id)
 
-      return result.match(
-        (bar) => ctx.json(bar, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((bar) => dto(BarDetailSchema, bar))
+        .match(
+          (bar) => ctx.json(bar, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -254,10 +271,10 @@ barsRoute
         200: {
           description: 'List of bar photos',
           content: {
-            'application/json': { schema: resolver(BarPhotoSchema.array()) },
+            'application/json': { schema: resolver(BarPhotoListSchema) },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ barId: 'string' })),
@@ -266,11 +283,13 @@ barsRoute
 
       const result = await ctx.get('bars').listPhotos(barId)
 
-      return result.match(
-        (photos) => ctx.json(photos, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((photos) => dto(BarPhotoListSchema, photos))
+        .match(
+          (photos) => ctx.json(photos, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -284,7 +303,8 @@ barsRoute
           description: 'Created bar photo',
           content: { 'application/json': { schema: resolver(BarPhotoSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -313,11 +333,13 @@ barsRoute
         payload.sub.id
       )
 
-      return result.match(
-        (photo) => ctx.json(photo, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((photo) => dto(BarPhotoSchema, photo))
+        .match(
+          (photo) => ctx.json(photo, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -331,7 +353,8 @@ barsRoute
           description: 'Deleted bar photo',
           content: { 'application/json': { schema: resolver(BarPhotoSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -342,11 +365,13 @@ barsRoute
 
       const result = await ctx.get('bars').deletePhoto(barId, id, payload.sub.id)
 
-      return result.match(
-        (photo) => ctx.json(photo, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((photo) => dto(BarPhotoSchema, photo))
+        .match(
+          (photo) => ctx.json(photo, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -364,11 +389,11 @@ barsRoute
           description: 'List of bar signature cocktails',
           content: {
             'application/json': {
-              schema: resolver(BarSignatureCocktailSchema.array()),
+              schema: resolver(BarSignatureCocktailListSchema),
             },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ barId: 'string' })),
@@ -377,11 +402,13 @@ barsRoute
 
       const result = await ctx.get('bars').listSignatureCocktails(barId)
 
-      return result.match(
-        (cocktails) => ctx.json(cocktails, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((cocktails) => dto(BarSignatureCocktailListSchema, cocktails))
+        .match(
+          (cocktails) => ctx.json(cocktails, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -399,7 +426,8 @@ barsRoute
             },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -430,11 +458,13 @@ barsRoute
         payload.sub.id
       )
 
-      return result.match(
-        (cocktail) => ctx.json(cocktail, 201),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((cocktail) => dto(BarSignatureCocktailSchema, cocktail))
+        .match(
+          (cocktail) => ctx.json(cocktail, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -452,7 +482,8 @@ barsRoute
             },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -467,11 +498,13 @@ barsRoute
         payload.sub.id
       )
 
-      return result.match(
-        (cocktail) => ctx.json(cocktail, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((cocktail) => dto(BarSignatureCocktailSchema, cocktail))
+        .match(
+          (cocktail) => ctx.json(cocktail, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -491,7 +524,7 @@ barsRoute
             'application/json': { schema: resolver(BarLikePaginatedSchema) },
           },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ barId: 'string' })),
@@ -503,11 +536,13 @@ barsRoute
 
       const result = await ctx.get('bars').listLikes(barId, page, pageSize)
 
-      return result.match(
-        (likes) => ctx.json(likes, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((likes) => dto(BarLikePaginatedSchema, likes))
+        .match(
+          (likes) => ctx.json(likes, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -523,7 +558,8 @@ barsRoute
             'application/json': { schema: resolver(BarLikeToggleSchema) },
           },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -534,11 +570,13 @@ barsRoute
 
       const result = await ctx.get('bars').toggleLike(barId, payload.sub.id)
 
-      return result.match(
-        (toggle) => ctx.json(toggle, 200),
-        (error) =>
-          ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((toggle) => dto(BarLikeToggleSchema, toggle))
+        .match(
+          (toggle) => ctx.json(toggle, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .route('/', reviewsRoute)

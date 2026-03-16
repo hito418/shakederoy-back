@@ -5,8 +5,11 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
-import { SafeUserSchema, SafeUserPaginatedSchema } from 'src/features/users/users.dto'
+import { dto, errResponse } from 'src/shared/response-schemas'
+import {
+  SafeUserSchema,
+  SafeUserPaginatedSchema,
+} from 'src/features/users/users.dto'
 import { usersService } from 'src/container'
 import { provide } from 'src/shared/provide'
 import favoritesRoute from './favorites'
@@ -15,6 +18,9 @@ import collectionsRoute from './collections'
 const usersRoute = new Hono()
   .basePath('/users')
   .use(provide('users', usersService))
+
+usersRoute.route('/', favoritesRoute)
+usersRoute.route('/', collectionsRoute)
 
 usersRoute.get(
   '/',
@@ -25,9 +31,11 @@ usersRoute.get(
     responses: {
       200: {
         description: 'Paginated list of users',
-        content: { 'application/json': { schema: resolver(SafeUserPaginatedSchema) } },
+        content: {
+          'application/json': { schema: resolver(SafeUserPaginatedSchema) },
+        },
       },
-      ...errorResponses,
+      500: errResponse('Database error'),
     },
   }),
   validator('query', type({ page: 'string.numeric.parse?' })),
@@ -37,10 +45,13 @@ usersRoute.get(
 
     const result = await ctx.get('users').list(page, pageSize)
 
-    return result.match(
-      (userList) => ctx.json(userList, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((userList) => dto(SafeUserPaginatedSchema, userList))
+      .match(
+        (userList) => ctx.json(userList, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
 
@@ -55,7 +66,9 @@ usersRoute.get(
         description: 'Current user',
         content: { 'application/json': { schema: resolver(SafeUserSchema) } },
       },
-      ...errorResponses,
+      401: errResponse('Missing or invalid session cookie'),
+      404: errResponse('User not found'),
+      500: errResponse('Database error'),
     },
   }),
   isAuth(),
@@ -64,10 +77,13 @@ usersRoute.get(
 
     const result = await ctx.get('users').getById(payload.sub.id)
 
-    return result.match(
-      (user) => ctx.json(user, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
 
@@ -82,7 +98,8 @@ usersRoute.get(
         description: 'User found',
         content: { 'application/json': { schema: resolver(SafeUserSchema) } },
       },
-      ...errorResponses,
+      404: errResponse('User not found'),
+      500: errResponse('Database error'),
     },
   }),
   validator(
@@ -96,10 +113,13 @@ usersRoute.get(
 
     const result = await ctx.get('users').getById(id)
 
-    return result.match(
-      (user) => ctx.json(user, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
 
@@ -108,13 +128,17 @@ usersRoute.post(
   describeRoute({
     tags: ['Users'],
     summary: 'Create user (admin)',
-    description: 'Creates a new user with a specified role. Requires admin role.',
+    description:
+      'Creates a new user with a specified role. Requires admin role.',
     responses: {
       201: {
         description: 'User created',
         content: { 'application/json': { schema: resolver(SafeUserSchema) } },
       },
-      ...errorResponses,
+      401: errResponse(
+        'Missing or invalid session cookie, or insufficient role'
+      ),
+      500: errResponse('Database error'),
     },
   }),
   isAuth('admin'),
@@ -130,12 +154,17 @@ usersRoute.post(
   async (ctx) => {
     const { username, email, password, role } = ctx.req.valid('json')
 
-    const result = await ctx.get('users').create(username, email, password, role)
+    const result = await ctx
+      .get('users')
+      .create(username, email, password, role)
 
-    return result.match(
-      (user) => ctx.json(user, 201),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 201),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
 
@@ -144,13 +173,16 @@ usersRoute.put(
   describeRoute({
     tags: ['Users'],
     summary: 'Update current user',
-    description: 'Updates the profile of the currently authenticated user. Accepts form data.',
+    description:
+      'Updates the profile of the currently authenticated user. Accepts form data.',
     responses: {
       200: {
         description: 'User updated',
         content: { 'application/json': { schema: resolver(SafeUserSchema) } },
       },
-      ...errorResponses,
+      401: errResponse('Missing or invalid session cookie'),
+      404: errResponse('User not found'),
+      500: errResponse('Database error'),
     },
   }),
   isAuth(),
@@ -172,10 +204,13 @@ usersRoute.put(
 
     const result = await ctx.get('users').update(payload.sub.id, updateDatas)
 
-    return result.match(
-      (user) => ctx.json(user, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
 
@@ -184,13 +219,18 @@ usersRoute.put(
   describeRoute({
     tags: ['Users'],
     summary: 'Update user (admin)',
-    description: 'Updates any user by ID including role changes. Requires admin role.',
+    description:
+      'Updates any user by ID including role changes. Requires admin role.',
     responses: {
       200: {
         description: 'User updated',
         content: { 'application/json': { schema: resolver(SafeUserSchema) } },
       },
-      ...errorResponses,
+      401: errResponse(
+        'Missing or invalid session cookie, or insufficient role'
+      ),
+      404: errResponse('User not found'),
+      500: errResponse('Database error'),
     },
   }),
   isAuth('admin'),
@@ -219,10 +259,13 @@ usersRoute.put(
 
     const result = await ctx.get('users').update(id, updateDatas)
 
-    return result.match(
-      (user) => ctx.json(user, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
 
@@ -237,7 +280,11 @@ usersRoute.delete(
         description: 'User deleted',
         content: { 'application/json': { schema: resolver(SafeUserSchema) } },
       },
-      ...errorResponses,
+      401: errResponse(
+        'Missing or invalid session cookie, or insufficient role'
+      ),
+      404: errResponse('User not found'),
+      500: errResponse('Database error'),
     },
   }),
   validator('param', type({ id: 'string' })),
@@ -247,10 +294,13 @@ usersRoute.delete(
 
     const result = await ctx.get('users').delete(id)
 
-    return result.match(
-      (user) => ctx.json(user, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
 
@@ -259,13 +309,16 @@ usersRoute.delete(
   describeRoute({
     tags: ['Users'],
     summary: 'Delete current user',
-    description: 'Deletes the currently authenticated user and clears their session.',
+    description:
+      'Deletes the currently authenticated user and clears their session.',
     responses: {
       200: {
         description: 'User deleted',
         content: { 'application/json': { schema: resolver(SafeUserSchema) } },
       },
-      ...errorResponses,
+      401: errResponse('Missing or invalid session cookie'),
+      404: errResponse('User not found'),
+      500: errResponse('Database error'),
     },
   }),
   isAuth(),
@@ -283,14 +336,14 @@ usersRoute.delete(
       deleteCookie(ctx, 'session_id')
     }
 
-    return result.match(
-      (user) => ctx.json(user, 200),
-      (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-    )
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
   }
 )
-
-usersRoute.route('/', favoritesRoute)
-usersRoute.route('/', collectionsRoute)
 
 export default usersRoute

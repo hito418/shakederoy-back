@@ -3,12 +3,16 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   CocktailIngredientSchema,
+  CocktailIngredientListSchema,
   CocktailPhotoSchema,
+  CocktailPhotoListSchema,
   PreparationStepSchema,
+  PreparationStepListSchema,
   CocktailStyleJunctionSchema,
+  CocktailStyleJunctionListSchema,
 } from 'src/features/cocktails/cocktails.dto'
 import { extrasService } from 'src/container'
 import { provide } from 'src/shared/provide'
@@ -28,9 +32,9 @@ extrasRoute
       responses: {
         200: {
           description: 'List of cocktail ingredients',
-          content: { 'application/json': { schema: resolver(CocktailIngredientSchema.array()) } },
+          content: { 'application/json': { schema: resolver(CocktailIngredientListSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ cocktailId: 'string' })),
@@ -39,10 +43,12 @@ extrasRoute
 
       const result = await ctx.get('extras').listIngredients(cocktailId)
 
-      return result.match(
-        (items) => ctx.json(items, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailIngredientListSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -56,7 +62,8 @@ extrasRoute
           description: 'Ingredient added to cocktail',
           content: { 'application/json': { schema: resolver(CocktailIngredientSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -82,10 +89,12 @@ extrasRoute
         notes,
       })
 
-      return result.match(
-        (item) => ctx.json(item, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailIngredientSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -101,7 +110,9 @@ extrasRoute
           description: 'Updated cocktail ingredient',
           content: { 'application/json': { schema: resolver(CocktailIngredientSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail ingredient not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -120,10 +131,12 @@ extrasRoute
 
       const result = await ctx.get('extras').updateIngredient(id, { quantity, unit, notes })
 
-      return result.match(
-        (item) => ctx.json(item, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailIngredientSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -137,7 +150,9 @@ extrasRoute
           description: 'Removed cocktail ingredient',
           content: { 'application/json': { schema: resolver(CocktailIngredientSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail ingredient not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -147,10 +162,12 @@ extrasRoute
 
       const result = await ctx.get('extras').deleteIngredient(id)
 
-      return result.match(
-        (item) => ctx.json(item, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailIngredientSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -165,9 +182,9 @@ extrasRoute
       responses: {
         200: {
           description: 'List of cocktail photos',
-          content: { 'application/json': { schema: resolver(CocktailPhotoSchema.array()) } },
+          content: { 'application/json': { schema: resolver(CocktailPhotoListSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ cocktailId: 'string' })),
@@ -176,10 +193,12 @@ extrasRoute
 
       const result = await ctx.get('extras').listPhotos(cocktailId)
 
-      return result.match(
-        (items) => ctx.json(items, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailPhotoListSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -193,7 +212,8 @@ extrasRoute
           description: 'Cocktail photo added',
           content: { 'application/json': { schema: resolver(CocktailPhotoSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -217,10 +237,12 @@ extrasRoute
         is_primary: isPrimary,
       })
 
-      return result.match(
-        (item) => ctx.json(item, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailPhotoSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -234,7 +256,9 @@ extrasRoute
           description: 'Deleted cocktail photo',
           content: { 'application/json': { schema: resolver(CocktailPhotoSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail photo not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -244,10 +268,12 @@ extrasRoute
 
       const result = await ctx.get('extras').deletePhoto(id)
 
-      return result.match(
-        (item) => ctx.json(item, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailPhotoSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -262,9 +288,9 @@ extrasRoute
       responses: {
         200: {
           description: 'List of preparation steps',
-          content: { 'application/json': { schema: resolver(PreparationStepSchema.array()) } },
+          content: { 'application/json': { schema: resolver(PreparationStepListSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ cocktailId: 'string' })),
@@ -273,10 +299,12 @@ extrasRoute
 
       const result = await ctx.get('extras').listSteps(cocktailId)
 
-      return result.match(
-        (items) => ctx.json(items, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PreparationStepListSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -290,7 +318,8 @@ extrasRoute
           description: 'Preparation step added',
           content: { 'application/json': { schema: resolver(PreparationStepSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -314,10 +343,12 @@ extrasRoute
         image_url: imageUrl,
       })
 
-      return result.match(
-        (item) => ctx.json(item, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PreparationStepSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -331,7 +362,9 @@ extrasRoute
           description: 'Updated preparation step',
           content: { 'application/json': { schema: resolver(PreparationStepSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Preparation step not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -354,10 +387,12 @@ extrasRoute
         image_url: imageUrl,
       })
 
-      return result.match(
-        (item) => ctx.json(item, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PreparationStepSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -371,7 +406,9 @@ extrasRoute
           description: 'Deleted preparation step',
           content: { 'application/json': { schema: resolver(PreparationStepSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Preparation step not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -381,10 +418,12 @@ extrasRoute
 
       const result = await ctx.get('extras').deleteStep(id)
 
-      return result.match(
-        (item) => ctx.json(item, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(PreparationStepSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 
@@ -399,9 +438,9 @@ extrasRoute
       responses: {
         200: {
           description: 'List of cocktail style links',
-          content: { 'application/json': { schema: resolver(CocktailStyleJunctionSchema.array()) } },
+          content: { 'application/json': { schema: resolver(CocktailStyleJunctionListSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ cocktailId: 'string' })),
@@ -410,10 +449,12 @@ extrasRoute
 
       const result = await ctx.get('extras').listStyleLinks(cocktailId)
 
-      return result.match(
-        (items) => ctx.json(items, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStyleJunctionListSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -427,7 +468,8 @@ extrasRoute
           description: 'Style linked to cocktail',
           content: { 'application/json': { schema: resolver(CocktailStyleJunctionSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -447,10 +489,12 @@ extrasRoute
         style_id: styleId,
       })
 
-      return result.match(
-        (item) => ctx.json(item, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStyleJunctionSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -464,7 +508,9 @@ extrasRoute
           description: 'Style unlinked from cocktail',
           content: { 'application/json': { schema: resolver(CocktailStyleJunctionSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Cocktail style link not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth(),
@@ -474,10 +520,12 @@ extrasRoute
 
       const result = await ctx.get('extras').removeStyle(id)
 
-      return result.match(
-        (item) => ctx.json(item, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(CocktailStyleJunctionSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

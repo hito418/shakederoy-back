@@ -2,10 +2,13 @@ import { deleteCookie, getSignedCookie, setSignedCookie } from 'hono/cookie'
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
-import { SafeUserSchema, SessionPayloadSchema } from 'src/features/auth/auth.dto'
+import {
+  SafeUserSchema,
+  SessionPayloadSchema,
+} from 'src/features/auth/auth.dto'
 import { type } from 'arktype'
 import { env } from 'src/shared/env'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { authService } from 'src/container'
 import { provide } from 'src/shared/provide'
@@ -25,13 +28,16 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Initialize admin account',
-      description: 'Creates the first admin account. Can only be used when no admin exists yet.',
+      description:
+        'Creates the first admin account. Can only be used when no admin exists yet.',
+      hide: true,
       responses: {
         201: {
           description: 'Admin account created',
           content: { 'application/json': { schema: resolver(SafeUserSchema) } },
         },
-        ...errorResponses,
+        409: errResponse('Admin account has already been initialized'),
+        500: errResponse('Database or internal server error'),
       },
     }),
     validator(
@@ -47,10 +53,13 @@ const authRoute = new Hono()
 
       const result = await ctx.get('auth').initAdmin(username, email, password)
 
-      return result.match(
-        (user) => ctx.json(user, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((user) => dto(SafeUserSchema, user))
+        .match(
+          (user) => ctx.json(user, 201),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -58,13 +67,16 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Register',
-      description: 'Creates a new user account and starts a session. Sets a signed session cookie on success.',
+      description:
+        'Creates a new user account and starts a session. Sets a signed session cookie on success.',
       responses: {
         201: {
           description: 'User registered and session created',
-          content: { 'application/json': { schema: resolver(SessionPayloadSchema) } },
+          content: {
+            'application/json': { schema: resolver(SessionPayloadSchema) },
+          },
         },
-        ...errorResponses,
+        500: errResponse('Database or internal server error'),
       },
     }),
     validator(
@@ -104,7 +116,11 @@ const authRoute = new Hono()
         SESSION_COOKIE_OPTIONS
       )
 
-      return ctx.json(payload, 201)
+      return dto(SessionPayloadSchema, payload).match(
+        (data) => ctx.json(data, 201),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
   .post(
@@ -112,13 +128,18 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Login',
-      description: 'Authenticates with credential (username or email) and password. Returns the existing session if a valid cookie is already present.',
+      description:
+        'Authenticates with credential (username or email) and password. Returns the existing session if a valid cookie is already present.',
       responses: {
         200: {
           description: 'Logged in and session created',
-          content: { 'application/json': { schema: resolver(SessionPayloadSchema) } },
+          content: {
+            'application/json': { schema: resolver(SessionPayloadSchema) },
+          },
         },
-        ...errorResponses,
+        401: errResponse('Invalid credentials'),
+        404: errResponse('User not found'),
+        500: errResponse('Database or internal server error'),
       },
     }),
     async (ctx, next) => {
@@ -137,7 +158,11 @@ const authRoute = new Hono()
         return
       }
 
-      return ctx.json(result.value, 200)
+      return dto(SessionPayloadSchema, result.value).match(
+        (data) => ctx.json(data, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     },
     validator(
       'json',
@@ -175,7 +200,11 @@ const authRoute = new Hono()
         SESSION_COOKIE_OPTIONS
       )
 
-      return ctx.json(payload, 200)
+      return dto(SessionPayloadSchema, payload).match(
+        (data) => ctx.json(data, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
     }
   )
   .get(
@@ -183,10 +212,11 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Logout',
-      description: 'Destroys the current session and clears the session cookie. Requires authentication.',
+      description:
+        'Destroys the current session and clears the session cookie. Requires authentication.',
       responses: {
         200: { description: 'Logged out' },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie'),
       },
     }),
     isAuth(),

@@ -4,7 +4,7 @@ import { describeRoute, resolver, validator } from 'hono-openapi'
 import { Hono } from 'hono'
 import { isAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
-import { errorResponses } from 'src/shared/response-schemas'
+import { dto, errResponse } from 'src/shared/response-schemas'
 import { GlassSchema, GlassPaginatedSchema } from 'src/features/cocktails/cocktails.dto'
 import { glassesService } from 'src/container'
 import { provide } from 'src/shared/provide'
@@ -25,7 +25,7 @@ glassesRoute
           description: 'Paginated list of glasses',
           content: { 'application/json': { schema: resolver(GlassPaginatedSchema) } },
         },
-        ...errorResponses,
+        500: errResponse('Database error'),
       },
     }),
     validator('query', type({ page: 'string.numeric.parse?' })),
@@ -35,10 +35,12 @@ glassesRoute
 
       const result = await ctx.get('glasses').list(page, pageSize)
 
-      return result.match(
-        (glassList) => ctx.json(glassList, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(GlassPaginatedSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .get(
@@ -52,7 +54,8 @@ glassesRoute
           description: 'Glass details',
           content: { 'application/json': { schema: resolver(GlassSchema) } },
         },
-        ...errorResponses,
+        404: errResponse('Glass not found'),
+        500: errResponse('Database error'),
       },
     }),
     validator('param', type({ id: 'string' })),
@@ -61,10 +64,12 @@ glassesRoute
 
       const result = await ctx.get('glasses').getById(id)
 
-      return result.match(
-        (glass) => ctx.json(glass, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(GlassSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .post(
@@ -78,7 +83,8 @@ glassesRoute
           description: 'Created glass',
           content: { 'application/json': { schema: resolver(GlassSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -101,10 +107,12 @@ glassesRoute
         image_url: imageUrl,
       })
 
-      return result.match(
-        (newGlass) => ctx.json(newGlass, 201),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(GlassSchema, data))
+        .match(
+          (data) => ctx.json(data, 201),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .put(
@@ -118,7 +126,9 @@ glassesRoute
           description: 'Updated glass',
           content: { 'application/json': { schema: resolver(GlassSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Glass not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -143,10 +153,12 @@ glassesRoute
         image_url: imageUrl,
       })
 
-      return result.match(
-        (updatedGlass) => ctx.json(updatedGlass, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(GlassSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
   .delete(
@@ -160,7 +172,9 @@ glassesRoute
           description: 'Deleted glass',
           content: { 'application/json': { schema: resolver(GlassSchema) } },
         },
-        ...errorResponses,
+        401: errResponse('Missing or invalid session cookie, or insufficient role'),
+        404: errResponse('Glass not found'),
+        500: errResponse('Database error'),
       },
     }),
     isAuth('admin'),
@@ -170,10 +184,12 @@ glassesRoute
 
       const result = await ctx.get('glasses').delete(id)
 
-      return result.match(
-        (deletedGlass) => ctx.json(deletedGlass, 200),
-        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
-      )
+      return result
+        .andThen((data) => dto(GlassSchema, data))
+        .match(
+          (data) => ctx.json(data, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
     }
   )
 

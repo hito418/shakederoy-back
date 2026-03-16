@@ -34,6 +34,9 @@ export const PartyParticipantStyleSchema = type({
   ...timestamps,
 })
 
+export const PartyParticipantListSchema = PartyParticipantSchema.array()
+export const PartyParticipantStyleListSchema = PartyParticipantStyleSchema.array()
+
 export const PartyCocktailSelectionSchema = type({
   ...strip,
   id: 'string',
@@ -43,3 +46,5 @@ export const PartyCocktailSelectionSchema = type({
   is_selected: 'number',
   ...timestamps,
 })
+
+export const PartyCocktailSelectionListSchema = PartyCocktailSelectionSchema.array()

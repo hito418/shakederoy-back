@@ -85,6 +85,9 @@ export const BarDetailSchema = type({
   ...timestampsWithSoftDelete,
 })
 
+export const BarPhotoDetailListSchema = BarPhotoDetailSchema.array()
+export const BarSignatureCocktailDetailListSchema = BarSignatureCocktailDetailSchema.array()
+
 // --- Sub-resource schemas ---
 
 export const BarPhotoSchema = type({
@@ -117,6 +120,9 @@ export const BarLikeSchema = type({
 })
 
 export const BarLikePaginatedSchema = paginatedSchema(BarLikeSchema)
+
+export const BarPhotoListSchema = BarPhotoSchema.array()
+export const BarSignatureCocktailListSchema = BarSignatureCocktailSchema.array()
 
 export const BarLikeToggleSchema = type({ ...strip, liked: 'boolean' })
 
