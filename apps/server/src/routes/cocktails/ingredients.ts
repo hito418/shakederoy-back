@@ -22,6 +22,7 @@ ingredientsRoute
     describeRoute({
       tags: ['Ingredients'],
       summary: 'List ingredients',
+      description: 'Returns a paginated list of all ingredients.',
       responses: {
         200: {
           description: 'Paginated list of ingredients',
@@ -51,6 +52,7 @@ ingredientsRoute
     describeRoute({
       tags: ['Ingredients'],
       summary: 'Get ingredient by ID',
+      description: 'Returns a single ingredient by its ID.',
       responses: {
         200: {
           description: 'Ingredient details',
@@ -79,6 +81,7 @@ ingredientsRoute
     describeRoute({
       tags: ['Ingredients'],
       summary: 'Create ingredient',
+      description: 'Creates a new ingredient with category, alcohol info, and optional image. Requires admin role.',
       responses: {
         201: {
           description: 'Created ingredient',
@@ -133,6 +136,7 @@ ingredientsRoute
     describeRoute({
       tags: ['Ingredients'],
       summary: 'Update ingredient',
+      description: 'Updates an ingredient by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Updated ingredient',
@@ -189,6 +193,7 @@ ingredientsRoute
     describeRoute({
       tags: ['Ingredients'],
       summary: 'Delete ingredient',
+      description: 'Deletes an ingredient by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Deleted ingredient',

@@ -24,6 +24,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Ingredients'],
       summary: 'List cocktail ingredients',
+      description: 'Returns all ingredients linked to a given cocktail.',
       responses: {
         200: {
           description: 'List of cocktail ingredients',
@@ -49,6 +50,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Ingredients'],
       summary: 'Add ingredient to cocktail',
+      description: 'Links an ingredient to a cocktail with optional quantity, unit, and notes. Requires authentication.',
       responses: {
         201: {
           description: 'Ingredient added to cocktail',
@@ -93,6 +95,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Ingredients'],
       summary: 'Update cocktail ingredient',
+      description: 'Updates the quantity, unit, or notes of a cocktail ingredient link. Requires authentication.',
       responses: {
         200: {
           description: 'Updated cocktail ingredient',
@@ -128,6 +131,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Ingredients'],
       summary: 'Remove cocktail ingredient',
+      description: 'Removes an ingredient from a cocktail. Requires authentication.',
       responses: {
         200: {
           description: 'Removed cocktail ingredient',
@@ -157,6 +161,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Photos'],
       summary: 'List cocktail photos',
+      description: 'Returns all photos associated with a given cocktail.',
       responses: {
         200: {
           description: 'List of cocktail photos',
@@ -182,6 +187,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Photos'],
       summary: 'Add cocktail photo',
+      description: 'Adds a photo to a cocktail with optional alt text and primary flag. Requires authentication.',
       responses: {
         201: {
           description: 'Cocktail photo added',
@@ -222,6 +228,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Photos'],
       summary: 'Delete cocktail photo',
+      description: 'Removes a photo from a cocktail. Requires authentication.',
       responses: {
         200: {
           description: 'Deleted cocktail photo',
@@ -251,6 +258,7 @@ extrasRoute
     describeRoute({
       tags: ['Preparation Steps'],
       summary: 'List preparation steps',
+      description: 'Returns all preparation steps for a given cocktail, ordered by step number.',
       responses: {
         200: {
           description: 'List of preparation steps',
@@ -276,6 +284,7 @@ extrasRoute
     describeRoute({
       tags: ['Preparation Steps'],
       summary: 'Add preparation step',
+      description: 'Adds a preparation step to a cocktail with step number, instruction, and optional image. Requires authentication.',
       responses: {
         201: {
           description: 'Preparation step added',
@@ -316,6 +325,7 @@ extrasRoute
     describeRoute({
       tags: ['Preparation Steps'],
       summary: 'Update preparation step',
+      description: 'Updates a preparation step by its ID. Requires authentication.',
       responses: {
         200: {
           description: 'Updated preparation step',
@@ -355,6 +365,7 @@ extrasRoute
     describeRoute({
       tags: ['Preparation Steps'],
       summary: 'Delete preparation step',
+      description: 'Deletes a preparation step by its ID. Requires authentication.',
       responses: {
         200: {
           description: 'Deleted preparation step',
@@ -384,6 +395,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Style Links'],
       summary: 'List cocktail style links',
+      description: 'Returns all style links for a given cocktail.',
       responses: {
         200: {
           description: 'List of cocktail style links',
@@ -409,6 +421,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Style Links'],
       summary: 'Link style to cocktail',
+      description: 'Associates a cocktail style with a cocktail. Requires authentication.',
       responses: {
         201: {
           description: 'Style linked to cocktail',
@@ -445,6 +458,7 @@ extrasRoute
     describeRoute({
       tags: ['Cocktail Style Links'],
       summary: 'Unlink style from cocktail',
+      description: 'Removes a style association from a cocktail. Requires authentication.',
       responses: {
         200: {
           description: 'Style unlinked from cocktail',

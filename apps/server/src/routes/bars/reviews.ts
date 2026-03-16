@@ -21,6 +21,7 @@ reviewsRoute
     describeRoute({
       tags: ['Bar Reviews'],
       summary: 'List bar reviews',
+      description: 'Returns a paginated list of reviews for a given bar.',
       responses: {
         200: {
           description: 'Paginated list of bar reviews',
@@ -49,6 +50,7 @@ reviewsRoute
     describeRoute({
       tags: ['Bar Reviews'],
       summary: 'Create bar review',
+      description: 'Creates a review for a bar with a rating (1-5) and optional comment. Requires authentication.',
       responses: {
         201: {
           description: 'Created bar review',
@@ -91,6 +93,7 @@ reviewsRoute
     describeRoute({
       tags: ['Bar Reviews'],
       summary: 'Get bar review by ID',
+      description: 'Returns a single bar review by its ID.',
       responses: {
         200: {
           description: 'Bar review details',
@@ -116,6 +119,7 @@ reviewsRoute
     describeRoute({
       tags: ['Bar Reviews'],
       summary: 'Update bar review',
+      description: 'Updates a bar review. Only the review author can update their review.',
       responses: {
         200: {
           description: 'Updated bar review',
@@ -151,6 +155,7 @@ reviewsRoute
     describeRoute({
       tags: ['Bar Reviews'],
       summary: 'Delete bar review',
+      description: 'Deletes a bar review. Only the review author can delete their review.',
       responses: {
         200: {
           description: 'Deleted bar review',

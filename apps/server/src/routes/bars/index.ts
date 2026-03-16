@@ -30,6 +30,7 @@ barsRoute
     describeRoute({
       tags: ['Bars'],
       summary: 'List bars',
+      description: 'Returns a paginated list of bars with optional filters by city, style, or search term.',
       responses: {
         200: {
           description: 'Paginated list of bars',
@@ -59,6 +60,7 @@ barsRoute
     describeRoute({
       tags: ['Bars'],
       summary: 'Get bar by ID',
+      description: 'Returns full bar details including photos, reviews, and like status for the authenticated user.',
       responses: {
         200: {
           description: 'Bar details',
@@ -92,6 +94,7 @@ barsRoute
     describeRoute({
       tags: ['Bars'],
       summary: 'Create bar',
+      description: 'Creates a new bar with optional photos. The authenticated user becomes the owner.',
       responses: {
         201: {
           description: 'Created bar',
@@ -161,6 +164,7 @@ barsRoute
     describeRoute({
       tags: ['Bars'],
       summary: 'Update bar',
+      description: 'Updates bar details. Only the bar owner can perform this action.',
       responses: {
         200: {
           description: 'Updated bar',
@@ -210,6 +214,7 @@ barsRoute
     describeRoute({
       tags: ['Bars'],
       summary: 'Delete bar (soft)',
+      description: 'Soft-deletes a bar by marking it as deleted. Only the bar owner can perform this action.',
       responses: {
         200: {
           description: 'Soft-deleted bar',
@@ -244,6 +249,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Photos'],
       summary: 'List bar photos',
+      description: 'Returns all photos associated with a given bar.',
       responses: {
         200: {
           description: 'List of bar photos',
@@ -272,6 +278,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Photos'],
       summary: 'Add bar photo',
+      description: 'Uploads a photo to a bar. Requires authentication and bar ownership.',
       responses: {
         201: {
           description: 'Created bar photo',
@@ -318,6 +325,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Photos'],
       summary: 'Delete bar photo',
+      description: 'Removes a photo from a bar. Requires authentication and bar ownership.',
       responses: {
         200: {
           description: 'Deleted bar photo',
@@ -350,6 +358,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Signature Cocktails'],
       summary: 'List bar signature cocktails',
+      description: 'Returns the list of signature cocktails for a given bar.',
       responses: {
         200: {
           description: 'List of bar signature cocktails',
@@ -380,6 +389,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Signature Cocktails'],
       summary: 'Add bar signature cocktail',
+      description: 'Links a cocktail as a signature item for a bar with optional price and availability. Requires authentication and bar ownership.',
       responses: {
         201: {
           description: 'Created bar signature cocktail',
@@ -432,6 +442,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Signature Cocktails'],
       summary: 'Remove bar signature cocktail',
+      description: 'Removes a cocktail from a bar\'s signature list. Requires authentication and bar ownership.',
       responses: {
         200: {
           description: 'Removed bar signature cocktail',
@@ -472,6 +483,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Likes'],
       summary: 'List bar likes',
+      description: 'Returns a paginated list of likes for a given bar.',
       responses: {
         200: {
           description: 'Paginated list of bar likes',
@@ -503,6 +515,7 @@ barsRoute
     describeRoute({
       tags: ['Bar Likes'],
       summary: 'Toggle bar like',
+      description: 'Toggles the like status for the authenticated user on a bar. Adds a like if not present, removes it otherwise.',
       responses: {
         200: {
           description: 'Like toggle result',

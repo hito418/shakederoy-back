@@ -28,6 +28,7 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'List cocktails',
+      description: 'Returns a paginated list of all cocktails.',
       responses: {
         200: {
           description: 'Paginated list of cocktails',
@@ -56,6 +57,7 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'Get cocktail by ID',
+      description: 'Returns full cocktail details by its ID.',
       responses: {
         200: {
           description: 'Cocktail details',
@@ -83,6 +85,7 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'Create cocktail',
+      description: 'Creates a new cocktail with optional attributes like intensity, difficulty, and glass type. Requires authentication.',
       responses: {
         201: {
           description: 'Created cocktail',
@@ -133,6 +136,7 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'Update cocktail',
+      description: 'Updates cocktail details. Requires authentication.',
       responses: {
         200: {
           description: 'Updated cocktail',
@@ -183,6 +187,7 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'Delete cocktail',
+      description: 'Deletes a cocktail by its ID. Requires authentication.',
       responses: {
         200: {
           description: 'Deleted cocktail',

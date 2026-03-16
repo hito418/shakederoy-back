@@ -25,6 +25,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collections'],
       summary: 'List my collections',
+      description: 'Returns a paginated list of the authenticated user\'s collections.',
       responses: {
         200: {
           description: 'Paginated list of collections',
@@ -53,6 +54,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collections'],
       summary: 'List public collections',
+      description: 'Returns a paginated list of all publicly shared collections.',
       responses: {
         200: {
           description: 'Paginated list of public collections',
@@ -79,6 +81,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collections'],
       summary: 'Get collection by ID',
+      description: 'Returns a single collection by its ID. Private collections are only visible to their owner.',
       responses: {
         200: {
           description: 'Collection found',
@@ -111,6 +114,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collections'],
       summary: 'Create collection',
+      description: 'Creates a new collection with optional description and visibility. Requires authentication.',
       responses: {
         201: {
           description: 'Collection created',
@@ -150,6 +154,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collections'],
       summary: 'Update collection',
+      description: 'Updates a collection. Only the collection owner can perform this action.',
       responses: {
         200: {
           description: 'Collection updated',
@@ -191,6 +196,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collections'],
       summary: 'Delete collection',
+      description: 'Deletes a collection. Only the collection owner can perform this action.',
       responses: {
         200: {
           description: 'Collection deleted',
@@ -219,6 +225,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collection Cocktails'],
       summary: 'List collection cocktails',
+      description: 'Returns a paginated list of cocktails in a collection. Private collections are only accessible to their owner.',
       responses: {
         200: {
           description: 'Paginated list of collection cocktails',
@@ -254,6 +261,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collection Cocktails'],
       summary: 'Add cocktail to collection',
+      description: 'Adds a cocktail to a collection. Only the collection owner can add cocktails.',
       responses: {
         201: {
           description: 'Cocktail added to collection',
@@ -291,6 +299,7 @@ collectionsRoute
     describeRoute({
       tags: ['Collection Cocktails'],
       summary: 'Remove cocktail from collection',
+      description: 'Removes a cocktail from a collection. Only the collection owner can remove cocktails.',
       responses: {
         200: {
           description: 'Cocktail removed from collection',

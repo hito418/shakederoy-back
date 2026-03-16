@@ -26,6 +26,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail Votes'],
       summary: 'List cocktail votes',
+      description: 'Returns a paginated list of votes for a given cocktail.',
       responses: {
         200: {
           description: 'Paginated list of cocktail votes',
@@ -54,6 +55,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail Votes'],
       summary: 'Vote on cocktail',
+      description: 'Records an upvote or downvote on a cocktail. Requires authentication.',
       responses: {
         200: {
           description: 'Cocktail vote recorded',
@@ -88,6 +90,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail Votes'],
       summary: 'Delete cocktail vote',
+      description: 'Removes a vote from a cocktail. Only the vote author can delete their vote.',
       responses: {
         200: {
           description: 'Deleted cocktail vote',
@@ -119,6 +122,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail Views'],
       summary: 'List cocktail views',
+      description: 'Returns a paginated list of view records for a given cocktail. Requires admin role.',
       responses: {
         200: {
           description: 'Paginated list of cocktail views',
@@ -148,6 +152,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail Views'],
       summary: 'Record cocktail view',
+      description: 'Records a view event for a cocktail, capturing IP address, user agent, and time metadata.',
       responses: {
         201: {
           description: 'Cocktail view recorded',
@@ -190,6 +195,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail of the Month'],
       summary: 'List cocktails of the month',
+      description: 'Returns the list of featured cocktails for a given year and month.',
       responses: {
         200: {
           description: 'List of cocktails of the month',
@@ -218,6 +224,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail of the Month'],
       summary: 'Get cocktail of the month by ID',
+      description: 'Returns a single cocktail of the month entry by its ID.',
       responses: {
         200: {
           description: 'Cocktail of the month entry',
@@ -243,6 +250,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail of the Month'],
       summary: 'Create cocktail of the month',
+      description: 'Features a cocktail for a given year and month with optional ranking. Requires admin role.',
       responses: {
         201: {
           description: 'Cocktail of the month created',
@@ -282,6 +290,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail of the Month'],
       summary: 'Update cocktail of the month',
+      description: 'Updates a cocktail of the month entry. Requires admin role.',
       responses: {
         200: {
           description: 'Updated cocktail of the month',
@@ -323,6 +332,7 @@ analyticsRoute
     describeRoute({
       tags: ['Cocktail of the Month'],
       summary: 'Delete cocktail of the month',
+      description: 'Removes a cocktail of the month entry. Requires admin role.',
       responses: {
         200: {
           description: 'Deleted cocktail of the month',

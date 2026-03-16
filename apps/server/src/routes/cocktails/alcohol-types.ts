@@ -19,6 +19,7 @@ alcoholTypesRoute
     describeRoute({
       tags: ['Alcohol Types'],
       summary: 'List alcohol types',
+      description: 'Returns a paginated list of all alcohol types.',
       responses: {
         200: {
           description: 'Paginated list of alcohol types',
@@ -45,6 +46,7 @@ alcoholTypesRoute
     describeRoute({
       tags: ['Alcohol Types'],
       summary: 'Get alcohol type by ID',
+      description: 'Returns a single alcohol type by its ID.',
       responses: {
         200: {
           description: 'Alcohol type details',
@@ -70,6 +72,7 @@ alcoholTypesRoute
     describeRoute({
       tags: ['Alcohol Types'],
       summary: 'Create alcohol type',
+      description: 'Creates a new alcohol type with optional ABV range. Requires admin role.',
       responses: {
         201: {
           description: 'Created alcohol type',
@@ -109,6 +112,7 @@ alcoholTypesRoute
     describeRoute({
       tags: ['Alcohol Types'],
       summary: 'Update alcohol type',
+      description: 'Updates an alcohol type by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Updated alcohol type',
@@ -150,6 +154,7 @@ alcoholTypesRoute
     describeRoute({
       tags: ['Alcohol Types'],
       summary: 'Delete alcohol type',
+      description: 'Deletes an alcohol type by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Deleted alcohol type',

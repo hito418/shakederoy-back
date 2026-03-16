@@ -27,6 +27,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Sessions'],
       summary: 'List party sessions',
+      description: 'Returns a paginated list of all party sessions.',
       responses: {
         200: {
           description: 'Paginated list of party sessions',
@@ -58,6 +59,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Sessions'],
       summary: 'Get party session by code',
+      description: 'Looks up a party session by its unique join code.',
       responses: {
         200: {
           description: 'Party session found',
@@ -86,6 +88,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Sessions'],
       summary: 'Get party session by ID',
+      description: 'Returns a single party session by its ID.',
       responses: {
         200: {
           description: 'Party session found',
@@ -114,6 +117,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Sessions'],
       summary: 'Create party session',
+      description: 'Creates a new party session with a unique code and optional name and mode. The authenticated user becomes the host.',
       responses: {
         201: {
           description: 'Party session created',
@@ -156,6 +160,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Sessions'],
       summary: 'Update party session',
+      description: 'Updates a party session. Only the session host can perform this action.',
       responses: {
         200: {
           description: 'Party session updated',
@@ -200,6 +205,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Sessions'],
       summary: 'Delete party session',
+      description: 'Deletes a party session. Only the session host can perform this action.',
       responses: {
         200: {
           description: 'Party session deleted',
@@ -234,6 +240,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Participants'],
       summary: 'List party participants',
+      description: 'Returns all participants of a given party session.',
       responses: {
         200: {
           description: 'List of party participants',
@@ -264,6 +271,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Participants'],
       summary: 'Add party participant',
+      description: 'Adds a participant to a party session. Can be a registered user or a guest with preferences.',
       responses: {
         201: {
           description: 'Party participant added',
@@ -310,6 +318,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Participants'],
       summary: 'Update party participant',
+      description: 'Updates a participant\'s preferences. Requires authentication.',
       responses: {
         200: {
           description: 'Party participant updated',
@@ -353,6 +362,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Participants'],
       summary: 'Remove party participant',
+      description: 'Removes a participant from a party session. Requires authentication.',
       responses: {
         200: {
           description: 'Party participant removed',
@@ -385,6 +395,7 @@ partiesRoute
     describeRoute({
       tags: ['Participant Styles'],
       summary: 'List participant styles',
+      description: 'Returns all cocktail style preferences for a given participant.',
       responses: {
         200: {
           description: 'List of participant styles',
@@ -415,6 +426,7 @@ partiesRoute
     describeRoute({
       tags: ['Participant Styles'],
       summary: 'Add participant style',
+      description: 'Adds a cocktail style preference to a participant. Requires authentication.',
       responses: {
         201: {
           description: 'Participant style added',
@@ -451,6 +463,7 @@ partiesRoute
     describeRoute({
       tags: ['Participant Styles'],
       summary: 'Remove participant style',
+      description: 'Removes a cocktail style preference from a participant. Requires authentication.',
       responses: {
         200: {
           description: 'Participant style removed',
@@ -485,6 +498,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Selections'],
       summary: 'List party selections',
+      description: 'Returns all cocktail selections for a given party session.',
       responses: {
         200: {
           description: 'List of party selections',
@@ -515,6 +529,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Selections'],
       summary: 'Add party selection',
+      description: 'Adds a cocktail to a party session\'s selection list with optional vote count and selection status.',
       responses: {
         201: {
           description: 'Party selection added',
@@ -560,6 +575,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Selections'],
       summary: 'Update party selection',
+      description: 'Updates a party selection\'s vote count or selection status. Requires authentication.',
       responses: {
         200: {
           description: 'Party selection updated',
@@ -602,6 +618,7 @@ partiesRoute
     describeRoute({
       tags: ['Party Selections'],
       summary: 'Remove party selection',
+      description: 'Removes a cocktail from a party session\'s selection list. Requires authentication.',
       responses: {
         200: {
           description: 'Party selection removed',

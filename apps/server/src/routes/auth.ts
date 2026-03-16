@@ -25,6 +25,7 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Initialize admin account',
+      description: 'Creates the first admin account. Can only be used when no admin exists yet.',
       responses: {
         201: {
           description: 'Admin account created',
@@ -57,6 +58,7 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Register',
+      description: 'Creates a new user account and starts a session. Sets a signed session cookie on success.',
       responses: {
         201: {
           description: 'User registered and session created',
@@ -110,6 +112,7 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Login',
+      description: 'Authenticates with credential (username or email) and password. Returns the existing session if a valid cookie is already present.',
       responses: {
         200: {
           description: 'Logged in and session created',
@@ -180,6 +183,7 @@ const authRoute = new Hono()
     describeRoute({
       tags: ['Auth'],
       summary: 'Logout',
+      description: 'Destroys the current session and clears the session cookie. Requires authentication.',
       responses: {
         200: { description: 'Logged out' },
         ...errorResponses,

@@ -19,6 +19,7 @@ glassesRoute
     describeRoute({
       tags: ['Glasses'],
       summary: 'List glasses',
+      description: 'Returns a paginated list of all glass types.',
       responses: {
         200: {
           description: 'Paginated list of glasses',
@@ -45,6 +46,7 @@ glassesRoute
     describeRoute({
       tags: ['Glasses'],
       summary: 'Get glass by ID',
+      description: 'Returns a single glass type by its ID.',
       responses: {
         200: {
           description: 'Glass details',
@@ -70,6 +72,7 @@ glassesRoute
     describeRoute({
       tags: ['Glasses'],
       summary: 'Create glass',
+      description: 'Creates a new glass type with optional description, capacity, and image. Requires admin role.',
       responses: {
         201: {
           description: 'Created glass',
@@ -109,6 +112,7 @@ glassesRoute
     describeRoute({
       tags: ['Glasses'],
       summary: 'Update glass',
+      description: 'Updates a glass type by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Updated glass',
@@ -150,6 +154,7 @@ glassesRoute
     describeRoute({
       tags: ['Glasses'],
       summary: 'Delete glass',
+      description: 'Deletes a glass type by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Deleted glass',

@@ -21,6 +21,7 @@ usersRoute.get(
   describeRoute({
     tags: ['Users'],
     summary: 'List users',
+    description: 'Returns a paginated list of all users.',
     responses: {
       200: {
         description: 'Paginated list of users',
@@ -48,6 +49,7 @@ usersRoute.get(
   describeRoute({
     tags: ['Users'],
     summary: 'Get current user',
+    description: 'Returns the profile of the currently authenticated user.',
     responses: {
       200: {
         description: 'Current user',
@@ -74,6 +76,7 @@ usersRoute.get(
   describeRoute({
     tags: ['Users'],
     summary: 'Get user by ID',
+    description: 'Returns a single user by their ID.',
     responses: {
       200: {
         description: 'User found',
@@ -105,6 +108,7 @@ usersRoute.post(
   describeRoute({
     tags: ['Users'],
     summary: 'Create user (admin)',
+    description: 'Creates a new user with a specified role. Requires admin role.',
     responses: {
       201: {
         description: 'User created',
@@ -140,6 +144,7 @@ usersRoute.put(
   describeRoute({
     tags: ['Users'],
     summary: 'Update current user',
+    description: 'Updates the profile of the currently authenticated user. Accepts form data.',
     responses: {
       200: {
         description: 'User updated',
@@ -179,6 +184,7 @@ usersRoute.put(
   describeRoute({
     tags: ['Users'],
     summary: 'Update user (admin)',
+    description: 'Updates any user by ID including role changes. Requires admin role.',
     responses: {
       200: {
         description: 'User updated',
@@ -225,6 +231,7 @@ usersRoute.delete(
   describeRoute({
     tags: ['Users'],
     summary: 'Delete user (admin)',
+    description: 'Deletes a user by ID. Requires admin role.',
     responses: {
       200: {
         description: 'User deleted',
@@ -252,6 +259,7 @@ usersRoute.delete(
   describeRoute({
     tags: ['Users'],
     summary: 'Delete current user',
+    description: 'Deletes the currently authenticated user and clears their session.',
     responses: {
       200: {
         description: 'User deleted',

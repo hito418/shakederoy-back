@@ -18,6 +18,7 @@ favoritesRoute
     describeRoute({
       tags: ['User Favorites'],
       summary: 'List user favorites',
+      description: 'Returns a paginated list of the authenticated user\'s favorite cocktails.',
       responses: {
         200: {
           description: 'Paginated list of user favorites',
@@ -46,6 +47,7 @@ favoritesRoute
     describeRoute({
       tags: ['User Favorites'],
       summary: 'Toggle cocktail favorite',
+      description: 'Adds or removes a cocktail from the authenticated user\'s favorites.',
       responses: {
         200: {
           description: 'Favorite toggled',

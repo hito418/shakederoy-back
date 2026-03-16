@@ -21,6 +21,7 @@ stylesRoute
     describeRoute({
       tags: ['Cocktail Styles'],
       summary: 'List cocktail styles',
+      description: 'Returns a paginated list of all cocktail styles.',
       responses: {
         200: {
           description: 'Paginated list of cocktail styles',
@@ -52,6 +53,7 @@ stylesRoute
     describeRoute({
       tags: ['Cocktail Styles'],
       summary: 'Get cocktail style by ID',
+      description: 'Returns a single cocktail style by its ID.',
       responses: {
         200: {
           description: 'Cocktail style details',
@@ -80,6 +82,7 @@ stylesRoute
     describeRoute({
       tags: ['Cocktail Styles'],
       summary: 'Create cocktail style',
+      description: 'Creates a new cocktail style. Requires admin role.',
       responses: {
         201: {
           description: 'Created cocktail style',
@@ -115,6 +118,7 @@ stylesRoute
     describeRoute({
       tags: ['Cocktail Styles'],
       summary: 'Update cocktail style',
+      description: 'Updates a cocktail style by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Updated cocktail style',
@@ -154,6 +158,7 @@ stylesRoute
     describeRoute({
       tags: ['Cocktail Styles'],
       summary: 'Delete cocktail style',
+      description: 'Deletes a cocktail style by its ID. Requires admin role.',
       responses: {
         200: {
           description: 'Deleted cocktail style',
