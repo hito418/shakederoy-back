@@ -1,4 +1,5 @@
 import { type } from 'arktype'
+import { getSignedCookie } from 'hono/cookie'
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import { env } from 'hono/adapter'
 import { Hono } from 'hono'
@@ -8,6 +9,7 @@ import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   CocktailVoteSchema,
   CocktailVotePaginatedSchema,
+  CocktailVoteSummarySchema,
   CocktailViewSchema,
   CocktailViewPaginatedSchema,
   CocktailOfMonthSchema,
@@ -15,6 +17,7 @@ import {
 } from 'src/features/cocktails/cocktails.dto'
 import { analyticsService } from 'src/container'
 import { provide } from 'src/shared/provide'
+import { env as appEnv } from 'src/shared/env'
 
 const analyticsRoute = new Hono()
   .use(provide('analytics', analyticsService))
@@ -22,6 +25,45 @@ const analyticsRoute = new Hono()
 // --- Votes ---
 
 analyticsRoute
+  .get(
+    '/:cocktailId/votes/summary',
+    describeRoute({
+      tags: ['Cocktail Votes'],
+      summary: 'Get cocktail vote summary',
+      description:
+        'Returns aggregated vote counts, net score, and the current user vote when a valid session cookie is present.',
+      responses: {
+        200: {
+          description: 'Aggregated cocktail vote summary',
+          content: { 'application/json': { schema: resolver(CocktailVoteSummarySchema) } },
+        },
+        500: errResponse('Database error'),
+      },
+    }),
+    validator('param', type({ cocktailId: 'string' })),
+    async (ctx) => {
+      const { cocktailId } = ctx.req.valid('param')
+
+      let userId: string | null = null
+      const sessionId = await getSignedCookie(ctx, appEnv.COOKIE_SECRET, 'session_id')
+
+      if (sessionId) {
+        const session = await ctx.get('sessionService').validate(sessionId)
+        if (session.isOk()) {
+          userId = session.value.sub.id
+        }
+      }
+
+      const result = await ctx.get('analytics').getVoteSummary(cocktailId, userId)
+
+      return result
+        .andThen((data) => dto(CocktailVoteSummarySchema, data))
+        .match(
+          (summary) => ctx.json(summary, 200),
+          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
+    }
+  )
   .get(
     '/:cocktailId/votes',
     describeRoute({

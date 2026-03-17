@@ -10,6 +10,55 @@ export class AnalyticsService {
 
   // --- Votes ---
 
+  getVoteSummary(
+    cocktailId: string,
+    userId?: string | null
+  ): ResultAsync<{
+    cocktail_id: string
+    upvotes: number
+    downvotes: number
+    score: number
+    total: number
+    user_vote: 'upvote' | 'downvote' | null
+  }, AppError> {
+    return this.db.transaction(async (trx) => {
+      const [upvoteRow, downvoteRow, currentVote] = await Promise.all([
+        trx
+          .selectFrom('cocktail_votes')
+          .select((eb) => eb.fn.countAll().as('count'))
+          .where('cocktail_id', '=', cocktailId)
+          .where('vote_type', '=', 'upvote')
+          .executeTakeFirst(),
+        trx
+          .selectFrom('cocktail_votes')
+          .select((eb) => eb.fn.countAll().as('count'))
+          .where('cocktail_id', '=', cocktailId)
+          .where('vote_type', '=', 'downvote')
+          .executeTakeFirst(),
+        userId
+          ? trx
+              .selectFrom('cocktail_votes')
+              .select('vote_type')
+              .where('cocktail_id', '=', cocktailId)
+              .where('user_id', '=', userId)
+              .executeTakeFirst()
+          : Promise.resolve(undefined),
+      ])
+
+      const upvotes = Number(upvoteRow?.count ?? 0)
+      const downvotes = Number(downvoteRow?.count ?? 0)
+
+      return {
+        cocktail_id: cocktailId,
+        upvotes,
+        downvotes,
+        score: upvotes - downvotes,
+        total: upvotes + downvotes,
+        user_vote: currentVote?.vote_type ?? null,
+      }
+    })
+  }
+
   listVotes(
     cocktailId: string,
     page: number,

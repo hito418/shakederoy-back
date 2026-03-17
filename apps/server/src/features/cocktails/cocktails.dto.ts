@@ -133,6 +133,16 @@ export const CocktailVoteSchema = type({
 
 export const CocktailVotePaginatedSchema = paginatedSchema(CocktailVoteSchema)
 
+export const CocktailVoteSummarySchema = type({
+  ...strip,
+  cocktail_id: 'string',
+  upvotes: 'number',
+  downvotes: 'number',
+  score: 'number',
+  total: 'number',
+  'user_vote?': "'upvote' | 'downvote' | null",
+})
+
 export const CocktailViewSchema = type({
   ...strip,
   id: 'string',
