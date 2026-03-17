@@ -1,5 +1,10 @@
 import { type } from 'arktype'
-import { paginatedSchema, strip, timestamps } from 'src/shared/response-schemas'
+import {
+  dateToString,
+  paginatedSchema,
+  strip,
+  timestamps,
+} from 'src/shared/response-schemas'
 
 export const SafeUserSchema = type({
   ...strip,
@@ -45,7 +50,7 @@ export const CollectionSchema = type({
   'description?': 'string | null',
   is_public: 'boolean',
   ...timestamps,
-  'deleted_at?': 'string | null',
+  'deleted_at?': dateToString.or(type('null')),
 })
 
 export const CollectionPaginatedSchema = paginatedSchema(CollectionSchema)
@@ -58,4 +63,6 @@ export const CollectionCocktailSchema = type({
   ...timestamps,
 })
 
-export const CollectionCocktailPaginatedSchema = paginatedSchema(CollectionCocktailSchema)
+export const CollectionCocktailPaginatedSchema = paginatedSchema(
+  CollectionCocktailSchema
+)

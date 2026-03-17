@@ -1,5 +1,5 @@
 import { type } from 'arktype'
-import { strip, timestamps } from 'src/shared/response-schemas'
+import { dateToString, strip, timestamps } from 'src/shared/response-schemas'
 
 export const SafeUserSchema = type({
   ...strip,
@@ -10,7 +10,7 @@ export const SafeUserSchema = type({
   'profile_pic?': 'string | null',
   'is_bar_owner?': 'boolean',
   ...timestamps,
-  'deleted_at?': 'string | null',
+  'deleted_at?': dateToString.or(type('null')),
 })
 
 export const SessionPayloadSchema = type({

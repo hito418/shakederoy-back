@@ -1,5 +1,5 @@
 {
-  "id": "c3b924ba-1bba-4bee-a9fd-be270bff3d76",
+  "id": "f62bc63f-c7b2-4b38-b211-4fc06f927a67",
   "prevId": "6f249398-996d-427e-a426-ba0e66f7ca36",
   "version": "7",
   "dialect": "postgresql",
@@ -1019,7 +1019,8 @@
           "type": "cocktail_difficulty",
           "typeSchema": "public",
           "primaryKey": false,
-          "notNull": false
+          "notNull": false,
+          "default": "'medium'"
         },
         "prep_time": {
           "name": "prep_time",

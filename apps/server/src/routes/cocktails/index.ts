@@ -167,7 +167,7 @@ cocktailsRoute
       'json',
       type({
         name: 'string > 3',
-        'slug?': 'string >= 1',
+        slug: 'string >= 1',
         'description?': 'string',
         isAlcoholic: 'boolean',
         'mainAlcoholId?': 'string',
