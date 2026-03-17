@@ -18,7 +18,7 @@ export const cocktails = pgTable('cocktails', {
     onDelete: 'set null',
   }),
   intensity: integer('intensity'),
-  difficulty: cocktailDifficultyEnum('difficulty'),
+  difficulty: cocktailDifficultyEnum('difficulty').default('medium'),
   prepTime: integer('prep_time'),
   glassId: uuid('glass_id').references(() => glasses.id, {
     onDelete: 'set null',
