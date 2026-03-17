@@ -31,9 +31,20 @@ export class ExtrasService {
     return this.db.queryMany((db) =>
       db
         .selectFrom('cocktail_ingredients')
-        .selectAll()
-        .where('cocktail_id', '=', cocktailId)
-        .orderBy('created_at', 'asc')
+        .innerJoin('ingredients', 'ingredients.id', 'cocktail_ingredients.ingredient_id')
+        .select([
+          'cocktail_ingredients.id',
+          'cocktail_ingredients.cocktail_id',
+          'cocktail_ingredients.ingredient_id',
+          'cocktail_ingredients.quantity',
+          'cocktail_ingredients.unit',
+          'cocktail_ingredients.notes',
+          'cocktail_ingredients.created_at',
+          'cocktail_ingredients.updated_at',
+          'ingredients.name as ingredient_name',
+        ])
+        .where('cocktail_ingredients.cocktail_id', '=', cocktailId)
+        .orderBy('cocktail_ingredients.created_at', 'asc')
         .execute()
     )
   }
