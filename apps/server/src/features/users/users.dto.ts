@@ -50,11 +50,7 @@ export const CollectionSchema = type({
   'description?': 'string | null',
   is_public: 'boolean',
   ...timestamps,
-<<<<<<< HEAD
-  'deleted_at?': 'string | null',
-=======
   'deleted_at?': dateToString.or(type('null')),
->>>>>>> dev
 })
 
 export const CollectionPaginatedSchema = paginatedSchema(CollectionSchema)
