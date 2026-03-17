@@ -3,15 +3,17 @@ import { resolver } from 'hono-openapi'
 import { Result, ok, err } from 'neverthrow'
 import { AppError } from 'src/shared/errors'
 
+const dateToString = type('Date').pipe((d) => d.toISOString(), type('string'))
+
 export const timestamps = {
-  created_at: 'string',
-  updated_at: 'string',
-} as const
+  created_at: dateToString,
+  updated_at: dateToString,
+}
 
 export const timestampsWithSoftDelete = {
   ...timestamps,
-  'deleted_at?': 'string | null',
-} as const
+  'deleted_at?': dateToString.or(type('null')),
+}
 
 const strip = { '+': 'delete' } as const
 
@@ -29,15 +31,7 @@ export const errResponse = (description: string): ErrorResponseEntry => ({
   content: { 'application/json': { schema: resolver(ErrorSchema) } },
 })
 
-export const errorResponses: Record<401 | 404 | 409 | 500, ErrorResponseEntry> =
-  {
-    401: errResponse('Unauthorized'),
-    404: errResponse('Not found'),
-    409: errResponse('Already exists'),
-    500: errResponse('Internal server error'),
-  }
-
-export { strip }
+export { strip, dateToString }
 
 export function paginatedSchema<t>(itemType: type.Any<t>) {
   return type({
@@ -56,7 +50,9 @@ export function dto<T extends type.Any>(
 ): Result<T['infer'], AppError> {
   const out = schema(data)
   if (out instanceof type.errors) {
-    return err(AppError.internalError(`Response schema mismatch: ${out.summary}`))
+    return err(
+      AppError.internalError(`Response schema mismatch: ${out.summary}`)
+    )
   }
   return ok(out)
 }

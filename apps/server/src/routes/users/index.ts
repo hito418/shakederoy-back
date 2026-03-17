@@ -32,7 +32,7 @@ usersRoute.get(
       200: {
         description: 'Paginated list of users',
         content: {
-          'application/json': { schema: resolver(SafeUserPaginatedSchema) },
+          'application/json': { schema: resolver(SafeUserPaginatedSchema.out) },
         },
       },
       500: errResponse('Database error'),
