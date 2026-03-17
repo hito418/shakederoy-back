@@ -24,23 +24,20 @@ const cocktailsRoute = new Hono()
   .basePath('/cocktails')
   .use(provide('cocktails', cocktailsService))
 
-function slugify(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-}
-
 cocktailsRoute
+  .route('/styles', stylesRoute)
+  .route('/', extrasRoute)
+  .route('/', analyticsRoute)
+  .route('/', glassesRoute)
+  .route('/', alcoholTypesRoute)
+  .route('/', ingredientsRoute)
   .get(
     '/',
     describeRoute({
       tags: ['Cocktails'],
       summary: 'List cocktails',
-      description: 'Returns a paginated, filterable, and sortable list of cocktails.',
+      description:
+        'Returns a paginated, filterable, and sortable list of cocktails.',
       responses: {
         200: {
           description: 'Paginated list of cocktails',
@@ -100,17 +97,16 @@ cocktailsRoute
         userId: query.user_id,
       }
 
-      const result = await ctx.get('cocktails').list(
-        query.page ?? 1,
-        pageSize,
-        filters
-      )
+      const result = await ctx
+        .get('cocktails')
+        .list(query.page ?? 1, pageSize, filters)
 
       return result
         .andThen((data) => dto(CocktailPaginatedSchema, data))
         .match(
           (data) => ctx.json(data, 200),
-          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
         )
     }
   )
@@ -141,7 +137,8 @@ cocktailsRoute
         .andThen((data) => dto(CocktailSchema, data))
         .match(
           (data) => ctx.json(data, 200),
-          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
         )
     }
   )
@@ -150,7 +147,8 @@ cocktailsRoute
     describeRoute({
       tags: ['Cocktails'],
       summary: 'Create cocktail',
-      description: 'Creates a cocktail with its ingredients, preparation steps, and style in a single request. Requires authentication.',
+      description:
+        'Creates a cocktail with its ingredients, preparation steps, and style in a single request. Requires authentication.',
       responses: {
         201: {
           description: 'Created cocktail with relations',
@@ -212,7 +210,8 @@ cocktailsRoute
         .andThen((data) => dto(CocktailFullSchema, data))
         .match(
           (data) => ctx.json(data, 201),
-          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
         )
     }
   )
@@ -263,13 +262,15 @@ cocktailsRoute
         difficulty: body.difficulty,
         prep_time: body.prepTime,
         glass_id: body.glassId,
+        status: body.status,
       })
 
       return result
         .andThen((data) => dto(CocktailSchema, data))
         .match(
           (data) => ctx.json(data, 200),
-          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
         )
     }
   )
@@ -302,15 +303,10 @@ cocktailsRoute
         .andThen((data) => dto(CocktailSchema, data))
         .match(
           (data) => ctx.json(data, 200),
-          (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
         )
     }
   )
-  .route('/styles', stylesRoute)
-  .route('/', extrasRoute)
-  .route('/', analyticsRoute)
-  .route('/', glassesRoute)
-  .route('/', alcoholTypesRoute)
-  .route('/', ingredientsRoute)
 
 export default cocktailsRoute
