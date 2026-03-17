@@ -41,7 +41,12 @@ export type CocktailListFilters = {
 
 export type CreateFullInput = {
   cocktail: CocktailInsert
-  ingredients: { ingredient_id: string; quantity?: string; unit?: string }[]
+  ingredients: {
+    ingredient_id?: string
+    ingredient_name?: string
+    quantity?: string
+    unit?: string
+  }[]
   steps: string[]
   styleId?: string
 }
@@ -203,12 +208,66 @@ export class CocktailsService {
 
       if (!cocktail) return AppError.databaseError('Failed to create cocktail')
 
-      const ingredients =
+      const resolvedIngredients =
         input.ingredients.length > 0
+          ? await Promise.all(
+              input.ingredients.map(async (ingredient) => {
+                if (ingredient.ingredient_id) {
+                  return {
+                    ingredient_id: ingredient.ingredient_id,
+                    quantity: ingredient.quantity,
+                    unit: ingredient.unit,
+                  }
+                }
+
+                const ingredientName = ingredient.ingredient_name?.trim()
+                if (!ingredientName) {
+                  throw AppError.internalError('Ingredient name or id is required')
+                }
+
+                const existingIngredient = await trx
+                  .selectFrom('ingredients')
+                  .select(['id'])
+                  .where(sql<boolean>`LOWER(name) = ${ingredientName.toLowerCase()}`)
+                  .executeTakeFirst()
+
+                if (existingIngredient) {
+                  return {
+                    ingredient_id: existingIngredient.id,
+                    quantity: ingredient.quantity,
+                    unit: ingredient.unit,
+                  }
+                }
+
+                const createdIngredient = await trx
+                  .insertInto('ingredients')
+                  .values({
+                    name: ingredientName,
+                    category: 'other',
+                    is_alcoholic: false,
+                  })
+                  .returning(['id'])
+                  .executeTakeFirst()
+
+                if (!createdIngredient) {
+                  throw AppError.databaseError('Failed to create ingredient')
+                }
+
+                return {
+                  ingredient_id: createdIngredient.id,
+                  quantity: ingredient.quantity,
+                  unit: ingredient.unit,
+                }
+              })
+            )
+          : []
+
+      const ingredients =
+        resolvedIngredients.length > 0
           ? await trx
               .insertInto('cocktail_ingredients')
               .values(
-                input.ingredients.map((i) => ({
+                resolvedIngredients.map((i) => ({
                   cocktail_id: cocktail.id,
                   ingredient_id: i.ingredient_id,
                   quantity: i.quantity,

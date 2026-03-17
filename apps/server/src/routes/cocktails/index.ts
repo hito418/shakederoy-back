@@ -174,7 +174,8 @@ cocktailsRoute
         'glassId?': 'string',
         'styleId?': 'string',
         ingredients: type({
-          ingredientId: 'string',
+          'ingredientId?': 'string',
+          'ingredientName?': 'string',
           'quantity?': 'string',
           'unit?': 'string',
         }).array(),
@@ -199,6 +200,7 @@ cocktailsRoute
         },
         ingredients: body.ingredients.map((i) => ({
           ingredient_id: i.ingredientId,
+          ingredient_name: i.ingredientName,
           quantity: i.quantity,
           unit: i.unit,
         })),
