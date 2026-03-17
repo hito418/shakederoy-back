@@ -13,6 +13,9 @@ import {
   PartyParticipantStyleListSchema,
   PartyCocktailSelectionSchema,
   PartyCocktailSelectionListSchema,
+  ScoredCocktailListSchema,
+  AggregatedIngredientListSchema,
+  BarmanViewSchema,
 } from 'src/features/parties/parties.dto'
 import { Hono } from 'hono'
 import { partiesService } from 'src/container'
@@ -697,6 +700,126 @@ partiesRoute
         .andThen((data) => dto(PartyCocktailSelectionSchema, data))
         .match(
           (selection) => ctx.json(selection, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
+    }
+  )
+
+  // --- Soirée Mode ---
+
+  .post(
+    '/:sessionId/generate',
+    describeRoute({
+      tags: ['Party Soirée'],
+      summary: 'Generate cocktail recommendations',
+      description:
+        'Scores approved cocktails against all participants\' preferences and selects the best matches, optimized for shared ingredients. Replaces any existing selections.',
+      responses: {
+        200: {
+          description: 'Generated cocktail recommendations',
+          content: {
+            'application/json': {
+              schema: resolver(ScoredCocktailListSchema),
+            },
+          },
+        },
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party session not found'),
+        500: errResponse('Database error'),
+      },
+    }),
+    isAuth(),
+    validator('param', type({ sessionId: 'string' })),
+    validator('query', type({ limit: 'string.numeric.parse?' })),
+    async (ctx) => {
+      const { sessionId } = ctx.req.valid('param')
+      const { limit = 5 } = ctx.req.valid('query')
+
+      const result = await ctx
+        .get('parties')
+        .generateRecommendations(sessionId, limit)
+
+      return result
+        .andThen((data) => dto(ScoredCocktailListSchema, data))
+        .match(
+          (cocktails) => ctx.json(cocktails, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
+    }
+  )
+  .get(
+    '/:sessionId/ingredients',
+    describeRoute({
+      tags: ['Party Soirée'],
+      summary: 'Aggregated ingredients (shopping list)',
+      description:
+        'Returns all ingredients needed for the selected cocktails, aggregated by ingredient with cocktail counts and quantities.',
+      responses: {
+        200: {
+          description: 'Aggregated ingredient list',
+          content: {
+            'application/json': {
+              schema: resolver(AggregatedIngredientListSchema),
+            },
+          },
+        },
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party session not found'),
+        500: errResponse('Database error'),
+      },
+    }),
+    isAuth(),
+    validator('param', type({ sessionId: 'string' })),
+    async (ctx) => {
+      const { sessionId } = ctx.req.valid('param')
+
+      const result = await ctx
+        .get('parties')
+        .getAggregatedIngredients(sessionId)
+
+      return result
+        .andThen((data) => dto(AggregatedIngredientListSchema, data))
+        .match(
+          (ingredients) => ctx.json(ingredients, 200),
+          (error) =>
+            ctx.json({ message: error.message }, errorToHttpStatus(error))
+        )
+    }
+  )
+  .get(
+    '/:sessionId/barman',
+    describeRoute({
+      tags: ['Party Soirée'],
+      summary: 'Barman view',
+      description:
+        'Returns the full barman view: selected cocktails with their ingredients and preparation steps, plus an aggregated shopping list.',
+      responses: {
+        200: {
+          description: 'Barman view with cocktails and shopping list',
+          content: {
+            'application/json': {
+              schema: resolver(BarmanViewSchema),
+            },
+          },
+        },
+        401: errResponse('Missing or invalid session cookie'),
+        404: errResponse('Party session not found'),
+        500: errResponse('Database error'),
+      },
+    }),
+    isAuth(),
+    validator('param', type({ sessionId: 'string' })),
+    async (ctx) => {
+      const { sessionId } = ctx.req.valid('param')
+
+      const result = await ctx.get('parties').getBarmanView(sessionId)
+
+      return result
+        .andThen((data) => dto(BarmanViewSchema, data))
+        .match(
+          (view) => ctx.json(view, 200),
           (error) =>
             ctx.json({ message: error.message }, errorToHttpStatus(error))
         )
