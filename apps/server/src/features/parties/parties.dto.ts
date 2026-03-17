@@ -1,5 +1,5 @@
 import { type } from 'arktype'
-import { paginatedSchema, strip, timestamps } from 'src/shared/response-schemas'
+import { dateToString, paginatedSchema, strip, timestamps } from 'src/shared/response-schemas'
 
 export const PartySessionSchema = type({
   ...strip,
@@ -9,7 +9,7 @@ export const PartySessionSchema = type({
   'name?': 'string | null',
   mode: "'voting' | 'host_picks' | 'random'",
   is_active: 'boolean',
-  'expires_at?': 'string | null',
+  'expires_at?': dateToString.or(type('null')),
   ...timestamps,
 })
 
