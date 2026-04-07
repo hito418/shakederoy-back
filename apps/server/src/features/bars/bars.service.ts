@@ -68,12 +68,17 @@ export class BarsService {
             'users.username as owner_username',
             'primary_photo.url as photo_url',
             'primary_photo.alt_text as photo_alt_text',
-            sql<number>`cast(count(distinct bar_likes.id) as integer)`.as(
-              'likes_count'
-            ),
-            sql<number | null>`cast(avg(bar_reviews.rating) as double precision)`.as(
-              'average_rating'
-            ),
+            (eb) =>
+              eb
+                .cast<number>(eb.fn.count('bar_likes.id'), 'integer')
+                .as('likes_count'),
+            (eb) =>
+              eb
+                .cast<number>(
+                  eb.fn.avg('bar_reviews.rating'),
+                  'double precision'
+                )
+                .as('average_rating'),
           ])
           .groupBy('bars.id')
           .groupBy('users.id')
@@ -100,12 +105,14 @@ export class BarsService {
         .selectAll('bars')
         .select([
           'users.username as owner_username',
-          sql<number>`cast(count(distinct bar_likes.id) as integer)`.as(
-            'likes_count'
-          ),
-          sql<number | null>`cast(avg(bar_reviews.rating) as double precision)`.as(
-            'average_rating'
-          ),
+          (eb) =>
+            eb
+              .cast<number>(eb.fn.count('bar_likes.id'), 'integer')
+              .as('likes_count'),
+          (eb) =>
+            eb
+              .cast<number>(eb.fn.avg('bar_reviews.rating'), 'double precision')
+              .as('average_rating'),
         ])
         .where('bars.deleted_at', 'is', null)
         .where('bars.id', '=', id)
@@ -155,10 +162,7 @@ export class BarsService {
     })
   }
 
-  create(
-    data: BarInsert,
-    photos?: { url: string; alt_text?: string }[]
-  ) {
+  create(data: BarInsert, photos?: { url: string; alt_text?: string }[]) {
     return this.db.query((db) =>
       db.transaction().execute(async (trx) => {
         const bar = await trx
@@ -285,27 +289,23 @@ export class BarsService {
   }
 
   deletePhoto(barId: string, id: string, userId: string) {
-    return this.db
-      .query((db) =>
-        db
-          .deleteFrom('bar_photos')
-          .where('id', '=', id)
-          .where('bar_id', '=', barId)
-          .where(
-            'bar_id',
-            'in',
-            db
-              .selectFrom('bars')
-              .select('id')
-              .where('owner_id', '=', userId)
-          )
-          .returningAll()
-          .executeTakeFirst()
-          .then((row) => {
-            if (!row) throw new Error('Bar photo not found')
-            return row
-          })
-      )
+    return this.db.query((db) =>
+      db
+        .deleteFrom('bar_photos')
+        .where('id', '=', id)
+        .where('bar_id', '=', barId)
+        .where(
+          'bar_id',
+          'in',
+          db.selectFrom('bars').select('id').where('owner_id', '=', userId)
+        )
+        .returningAll()
+        .executeTakeFirst()
+        .then((row) => {
+          if (!row) throw new Error('Bar photo not found')
+          return row
+        })
+    )
   }
 
   // --- Bar Signature Cocktails ---
@@ -321,10 +321,7 @@ export class BarsService {
     )
   }
 
-  createSignatureCocktail(
-    data: BarSignatureCocktailInsert,
-    userId: string
-  ) {
+  createSignatureCocktail(data: BarSignatureCocktailInsert, userId: string) {
     return this.db.query((db) =>
       db.transaction().execute(async (trx) => {
         const bar = await trx
@@ -354,11 +351,7 @@ export class BarsService {
     )
   }
 
-  deleteSignatureCocktail(
-    barId: string,
-    id: string,
-    userId: string
-  ) {
+  deleteSignatureCocktail(barId: string, id: string, userId: string) {
     return this.db.query((db) =>
       db
         .deleteFrom('bar_signature_cocktails')
@@ -367,10 +360,7 @@ export class BarsService {
         .where(
           'bar_id',
           'in',
-          db
-            .selectFrom('bars')
-            .select('id')
-            .where('owner_id', '=', userId)
+          db.selectFrom('bars').select('id').where('owner_id', '=', userId)
         )
         .returningAll()
         .executeTakeFirst()
