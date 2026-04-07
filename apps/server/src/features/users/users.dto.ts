@@ -13,6 +13,7 @@ export const SafeUserSchema = type({
   email: 'string',
   role: "'admin' | 'user'",
   'profile_pic?': 'string | null',
+  is_bar_owner: 'boolean',
   ...timestamps,
 })
 

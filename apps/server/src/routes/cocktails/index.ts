@@ -196,6 +196,7 @@ cocktailsRoute
           difficulty: body.difficulty,
           prep_time: body.prepTime,
           glass_id: body.glassId,
+          status: 'pending',
           created_by_id: payload.sub.id,
         },
         ingredients: body.ingredients.map((i) => ({
@@ -254,6 +255,23 @@ cocktailsRoute
     async (ctx) => {
       const { id } = ctx.req.valid('param')
       const body = ctx.req.valid('json')
+      const payload = ctx.get('userPayload')
+
+      const ownsCocktail = await ctx
+        .get('cocktails')
+        .getOwnedByUser(id, payload.sub.id)
+        .match(
+          () => true,
+          () => false
+        )
+
+      if (payload.role !== 'admin' && !ownsCocktail) {
+        return ctx.json({ message: 'Unauthorized' }, 401)
+      }
+
+      if (body.status !== undefined && payload.role !== 'admin') {
+        return ctx.json({ message: 'Unauthorized' }, 401)
+      }
 
       const result = await ctx.get('cocktails').update(id, {
         name: body.name,
@@ -298,6 +316,21 @@ cocktailsRoute
     validator('param', type({ id: 'string' })),
     async (ctx) => {
       const { id } = ctx.req.valid('param')
+      const payload = ctx.get('userPayload')
+
+      if (payload.role !== 'admin') {
+        const ownsCocktail = await ctx
+          .get('cocktails')
+          .getOwnedByUser(id, payload.sub.id)
+          .match(
+            () => true,
+            () => false
+          )
+
+        if (!ownsCocktail) {
+          return ctx.json({ message: 'Unauthorized' }, 401)
+        }
+      }
 
       const result = await ctx.get('cocktails').delete(id)
 

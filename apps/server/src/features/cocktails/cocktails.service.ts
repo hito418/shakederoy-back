@@ -335,4 +335,17 @@ export class CocktailsService {
       AppError.notFound('Cocktail')
     )
   }
+
+  getOwnedByUser(id: string, userId: string): ResultAsync<Cocktail, AppError> {
+    return this.db.queryFirst(
+      (db) =>
+        db
+          .selectFrom('cocktails')
+          .selectAll()
+          .where('id', '=', id)
+          .where('created_by_id', '=', userId)
+          .executeTakeFirst(),
+      AppError.notFound('Cocktail')
+    )
+  }
 }

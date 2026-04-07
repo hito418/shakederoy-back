@@ -3,12 +3,13 @@ import { getSignedCookie } from 'hono/cookie'
 import { describeRoute, resolver, validator } from 'hono-openapi'
 import { env } from 'hono/adapter'
 import { Hono } from 'hono'
-import { isAuth } from 'src/features/auth/auth.middleware'
+import { isAuth, optionalAuth } from 'src/features/auth/auth.middleware'
 import { errorToHttpStatus } from 'src/shared/errors'
 import { dto, errResponse } from 'src/shared/response-schemas'
 import {
   CocktailVoteSchema,
   CocktailVotePaginatedSchema,
+  CocktailRankingListSchema,
   CocktailVoteSummarySchema,
   CocktailViewSchema,
   CocktailViewPaginatedSchema,
@@ -21,8 +22,45 @@ import { env as appEnv } from 'src/shared/env'
 
 const analyticsRoute = new Hono().use(provide('analytics', analyticsService))
 
-// --- Votes ---
+analyticsRoute.get(
+  '/rankings',
+  describeRoute({
+    tags: ['Cocktail Rankings'],
+    summary: 'List cocktail rankings',
+    description:
+      'Returns weekly or monthly cocktail rankings based on votes recorded during the selected period.',
+    responses: {
+      200: {
+        description: 'List of ranked cocktails',
+        content: {
+          'application/json': { schema: resolver(CocktailRankingListSchema) },
+        },
+      },
+      500: errResponse('Database error'),
+    },
+  }),
+  validator(
+    'query',
+    type({
+      'period?': "'weekly' | 'monthly'",
+      'limit?': 'string.numeric.parse',
+    })
+  ),
+  async (ctx) => {
+    const { period = 'weekly', limit = 10 } = ctx.req.valid('query')
 
+    const result = await ctx.get('analytics').listRankings(period, limit)
+
+    return result
+      .andThen((data) => dto(CocktailRankingListSchema, data))
+      .match(
+        (rankings) => ctx.json(rankings, 200),
+        (error) => ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+  }
+)
+
+// --- Votes ---
 analyticsRoute
   .get(
     '/:cocktailId/votes/summary',
@@ -41,13 +79,11 @@ analyticsRoute
         500: errResponse('Database error'),
       },
     }),
-    isAuth(),
+    optionalAuth(),
     validator('param', type({ cocktailId: 'string' })),
     async (ctx) => {
       const { cocktailId } = ctx.req.valid('param')
-      const {
-        sub: { id: userId },
-      } = ctx.get('userPayload')
+      const userId = ctx.get('userPayload')?.sub.id ?? null
 
       const result = await ctx
         .get('analytics')

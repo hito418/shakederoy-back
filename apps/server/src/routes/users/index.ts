@@ -215,6 +215,58 @@ usersRoute.put(
 )
 
 usersRoute.put(
+  '/update-role/:id',
+  describeRoute({
+    tags: ['Users'],
+    summary: 'Update user role and bar-owner flag (admin)',
+    description:
+      'Updates role and bar owner status for a user. Requires admin role.',
+    responses: {
+      200: {
+        description: 'User updated',
+        content: { 'application/json': { schema: resolver(SafeUserSchema) } },
+      },
+      401: errResponse(
+        'Missing or invalid session cookie, or insufficient role'
+      ),
+      404: errResponse('User not found'),
+      500: errResponse('Database error'),
+    },
+  }),
+  isAuth('admin'),
+  validator(
+    'param',
+    type({
+      id: 'string',
+    })
+  ),
+  validator(
+    'json',
+    type({
+      'role?': '"admin" | "user"',
+      'isBarOwner?': 'boolean',
+    })
+  ),
+  async (ctx) => {
+    const { id } = ctx.req.valid('param')
+    const { role, isBarOwner } = ctx.req.valid('json')
+
+    const result = await ctx.get('users').update(id, {
+      role,
+      is_bar_owner: isBarOwner,
+    })
+
+    return result
+      .andThen((user) => dto(SafeUserSchema, user))
+      .match(
+        (user) => ctx.json(user, 200),
+        (error) =>
+          ctx.json({ message: error.message }, errorToHttpStatus(error))
+      )
+  }
+)
+
+usersRoute.put(
   '/update/:id',
   describeRoute({
     tags: ['Users'],

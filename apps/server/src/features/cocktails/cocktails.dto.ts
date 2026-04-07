@@ -143,6 +143,17 @@ export const CocktailVoteSummarySchema = type({
   'user_vote?': "'upvote' | 'downvote' | null",
 })
 
+export const CocktailRankingSchema = type({
+  ...strip,
+  cocktail_id: 'string',
+  score: 'number',
+  upvotes: 'number',
+  downvotes: 'number',
+  total: 'number',
+})
+
+export const CocktailRankingListSchema = CocktailRankingSchema.array()
+
 export const CocktailViewSchema = type({
   ...strip,
   id: 'string',

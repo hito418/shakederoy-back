@@ -14,6 +14,7 @@ const safeUserColumns: (keyof SafeUser)[] = [
   'email',
   'role',
   'profile_pic',
+  'is_bar_owner',
   'created_at',
   'updated_at',
 ] as const

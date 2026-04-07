@@ -8,6 +8,84 @@ import { AppError } from 'src/shared/errors'
 export class AnalyticsService {
   constructor(private db: DbService) {}
 
+  listRankings(
+    period: 'weekly' | 'monthly',
+    limit: number
+  ): ResultAsync<
+    {
+      cocktail_id: string
+      score: number
+      upvotes: number
+      downvotes: number
+      total: number
+    }[],
+    AppError
+  > {
+    return this.db.transaction(async (trx) => {
+      const now = new Date()
+      const startDate = new Date(now)
+
+      if (period === 'weekly') {
+        const day = startDate.getDay()
+        const diff = day === 0 ? 6 : day - 1
+        startDate.setDate(startDate.getDate() - diff)
+      } else {
+        startDate.setDate(1)
+      }
+
+      startDate.setHours(0, 0, 0, 0)
+
+      const votes = await trx
+        .selectFrom('cocktail_votes')
+        .innerJoin('cocktails', 'cocktail_votes.cocktail_id', 'cocktails.id')
+        .select(['cocktail_votes.cocktail_id', 'cocktail_votes.vote_type'])
+        .where('cocktail_votes.created_at', '>=', startDate)
+        .where('cocktails.status', '=', 'approved')
+        .where('cocktails.deleted_at', 'is', null)
+        .execute()
+
+      const rankingsMap = new Map<
+        string,
+        {
+          cocktail_id: string
+          score: number
+          upvotes: number
+          downvotes: number
+          total: number
+        }
+      >()
+
+      for (const vote of votes) {
+        const current = rankingsMap.get(vote.cocktail_id) ?? {
+          cocktail_id: vote.cocktail_id,
+          score: 0,
+          upvotes: 0,
+          downvotes: 0,
+          total: 0,
+        }
+
+        if (vote.vote_type === 'upvote') {
+          current.upvotes += 1
+          current.score += 1
+        } else {
+          current.downvotes += 1
+          current.score -= 1
+        }
+
+        current.total += 1
+        rankingsMap.set(vote.cocktail_id, current)
+      }
+
+      return Array.from(rankingsMap.values())
+        .sort((a, b) => {
+          if (b.score !== a.score) return b.score - a.score
+          if (b.upvotes !== a.upvotes) return b.upvotes - a.upvotes
+          return b.total - a.total
+        })
+        .slice(0, limit)
+    })
+  }
+
   // --- Votes ---
 
   getVoteSummary(

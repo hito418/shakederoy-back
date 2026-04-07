@@ -45,10 +45,10 @@ barsRoute
     }),
     validator('query', BarListQuerySchema),
     async (ctx) => {
-      const { page = 1, city, style, search } = ctx.req.valid('query')
+      const { page = 1, city, style, search, owner_id } = ctx.req.valid('query')
       const pageSize = Number(env(ctx).PAGE_SIZE)
 
-      const result = await ctx.get('bars').list(page, pageSize, { city, style, search })
+      const result = await ctx.get('bars').list(page, pageSize, { city, style, search, ownerId: owner_id })
 
       return result
         .andThen((bars) => dto(BarListPaginatedSchema, bars))

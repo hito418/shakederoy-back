@@ -145,4 +145,5 @@ export const BarListQuerySchema = type({
   'city?': 'string',
   'style?': barStyleValues,
   'search?': 'string',
+  'owner_id?': 'string',
 })

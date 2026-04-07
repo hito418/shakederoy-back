@@ -12,6 +12,7 @@ export type BarListFilters = {
   city?: string
   style?: Bar['style']
   search?: string
+  ownerId?: string
 }
 
 export class BarsService {
@@ -21,16 +22,20 @@ export class BarsService {
 
   list(page: number, pageSize: number, filters: BarListFilters = {}) {
     const applyFilters = <T>(qb: SelectQueryBuilder<Database, 'bars', T>) => {
+      let query = qb
       if (filters.city) {
-        qb.where('bars.city', '=', filters.city)
+        query = query.where('bars.city', '=', filters.city)
       }
       if (filters.style) {
-        qb.where('bars.style', '=', filters.style)
+        query = query.where('bars.style', '=', filters.style)
       }
       if (filters.search) {
-        qb.where('bars.name', 'ilike', `%${filters.search}%`)
+        query = query.where('bars.name', 'ilike', `%${filters.search}%`)
       }
-      return qb
+      if (filters.ownerId) {
+        query = query.where('bars.owner_id', '=', filters.ownerId)
+      }
+      return query
     }
 
     return this.db.queryPaginated(
