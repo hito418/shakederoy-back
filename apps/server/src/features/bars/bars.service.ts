@@ -68,8 +68,12 @@ export class BarsService {
             'users.username as owner_username',
             'primary_photo.url as photo_url',
             'primary_photo.alt_text as photo_alt_text',
-            (eb) => eb.fn.count('bar_likes.id').as('likes_count'),
-            (eb) => eb.fn.avg('bar_reviews.rating').as('average_rating'),
+            sql<number>`cast(count(distinct bar_likes.id) as integer)`.as(
+              'likes_count'
+            ),
+            sql<number | null>`cast(avg(bar_reviews.rating) as double precision)`.as(
+              'average_rating'
+            ),
           ])
           .groupBy('bars.id')
           .groupBy('users.id')
@@ -96,8 +100,12 @@ export class BarsService {
         .selectAll('bars')
         .select([
           'users.username as owner_username',
-          (eb) => eb.fn.count('bar_likes.id').as('likes_count'),
-          (eb) => eb.fn.avg('bar_reviews.rating').as('average_rating'),
+          sql<number>`cast(count(distinct bar_likes.id) as integer)`.as(
+            'likes_count'
+          ),
+          sql<number | null>`cast(avg(bar_reviews.rating) as double precision)`.as(
+            'average_rating'
+          ),
         ])
         .where('bars.deleted_at', 'is', null)
         .where('bars.id', '=', id)
