@@ -8,7 +8,7 @@ Sentry.init({
   environment: env.NODE_ENV.toLowerCase(),
   enabled: env.NODE_ENV !== 'DEV',
   sendDefaultPii: true,
-  tracesSampleRate: env.NODE_ENV === 'PROD' ? 0.2 : 1.0,
+  tracesSampleRate: 0,
   integrations: [],
   release: 'shakederoy@1.0.0',
 })
