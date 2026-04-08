@@ -11,6 +11,7 @@ const envSchema = type({
   APP_PORT: 'string.numeric.parse = "3000"',
   PAGE_SIZE: 'string.numeric.parse = "15"',
   NODE_ENV: '"DEV" | "STAGING" | "PROD" = "DEV"',
+  SENTRY_DSN: 'string = ""',
 })
 
 const result = envSchema(process.env)

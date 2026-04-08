@@ -1,36 +1,10 @@
+import './instrument'
 import { serve } from '@hono/node-server'
 import { Scalar } from '@scalar/hono-api-reference'
-import { Hono } from 'hono'
 import { openAPIRouteHandler } from 'hono-openapi'
-import { cors } from 'hono/cors'
 import { showRoutes } from 'hono/dev'
-import './config/arktype'
-import authRoute from './routes/auth'
-import barsRoute from './routes/bars'
-import cocktailsRoute from './routes/cocktails'
-import partiesRoute from './routes/parties'
-import usersRoute from './routes/users'
+import { app } from './app'
 import { env } from './shared/env'
-import './shared/hono'
-import { provide } from './shared/provide'
-import { sessionService } from './container'
-
-const app = new Hono()
-  .use(provide('sessionService', sessionService))
-  .use(
-    cors({
-      origin: env.CORS_ORIGIN.split(','),
-      credentials: true,
-    })
-  )
-  .route('/', authRoute)
-  .route('/', usersRoute)
-  .route('/', cocktailsRoute)
-  .route('/', barsRoute)
-  .route('/', partiesRoute)
-  .get('/healthcheck', (ctx) => {
-    return ctx.json({ status: 'ok' }, 200)
-  })
 
 app
   .get(

@@ -14,13 +14,16 @@
     "start": "node dist/main.js",
     "start:no-env": "node dist/main.js",
     "dev": "tsx --watch src/main.ts",
-    "seed": "tsx src/scripts/seed/index.ts"
+    "seed": "tsx src/scripts/seed/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@hono/node-server": "^1.10.0",
     "@hono/standard-validator": "^0.1.5",
     "@repo/schemas": "workspace:*",
     "@scalar/hono-api-reference": "^0.9.45",
+    "@sentry/node": "^10.47.0",
     "arktype": "^2.1.29",
     "bcrypt": "^6.0.0",
     "hono": "^4.2.4",
@@ -42,6 +45,7 @@
     "oxlint": "catalog:",
     "tsdown": "^0.20.1",
     "tsx": "^4.20.5",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "^4.1.3"
   }
 }
