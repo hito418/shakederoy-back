@@ -33,6 +33,5 @@ export const app = new Hono()
   })
   .onError((err, ctx) => {
     Sentry.captureException(err)
-    console.log('err', err)
     return ctx.json({ error: 'Internal Server Error' }, 500)
   })
