@@ -23,11 +23,12 @@ services:
       NODE_ENV: ${NODE_ENV}
       APP_PORT: ${APP_PORT}
       PAGE_SIZE: ${PAGE_SIZE}
+      SENTRY_DSN: ${SENTRY_DSN}
     networks:
       - shakederoy_backend
       - shakederoy_proxy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:${APP_PORT}/healthcheck"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:${APP_PORT}/healthcheck']
       interval: 1m30s
       timeout: 10s
       retries: 3
@@ -45,7 +46,7 @@ services:
       - shakederoy_database:/var/lib/postgresql/data
     restart: always
     expose:
-      - "5432"
+      - '5432'
 
 volumes:
   shakederoy_database:
