@@ -58,7 +58,8 @@ export class AuthService {
   registerUser(
     username: string,
     email: string,
-    password: string
+    password: string,
+    isBarOwner = false
   ): ResultAsync<UserCredentials, AppError> {
     return fromPromise(bcrypt.hash(password, 10), () =>
       AppError.internalError('Failed to hash password')
@@ -72,6 +73,7 @@ export class AuthService {
                 username,
                 email,
                 password: hashedPassword,
+                is_bar_owner: isBarOwner,
               })
               .returningAll()
               .executeTakeFirst(),

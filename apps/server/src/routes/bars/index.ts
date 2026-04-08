@@ -19,10 +19,19 @@ import { dto, errResponse } from 'src/shared/response-schemas'
 import { barsService } from 'src/container'
 import { provide } from 'src/shared/provide'
 import reviewsRoute from './reviews'
+import { usersService } from 'src/container'
 
 const barsRoute = new Hono()
   .basePath('/bars')
   .use(provide('bars', barsService))
+
+async function requireBarOwnerAccount(userId: string) {
+  const userResult = await usersService.getById(userId)
+  if (userResult.isErr() || !userResult.value.is_bar_owner) {
+    return false
+  }
+  return true
+}
 
 // --- Bars CRUD ---
 
@@ -141,6 +150,13 @@ barsRoute
       const payload = ctx.get('userPayload')
       const data = ctx.req.valid('json')
 
+      if (!(await requireBarOwnerAccount(payload.sub.id))) {
+        return ctx.json(
+          { message: 'Compte bar requis pour creer un bar.' },
+          403
+        )
+      }
+
       const result = await ctx.get('bars').create(
         {
           name: data.name,
@@ -210,6 +226,13 @@ barsRoute
       const { id } = ctx.req.valid('param')
       const payload = ctx.get('userPayload')
       const data = ctx.req.valid('json')
+
+      if (!(await requireBarOwnerAccount(payload.sub.id))) {
+        return ctx.json(
+          { message: 'Compte bar requis pour modifier un bar.' },
+          403
+        )
+      }
 
       const result = await ctx.get('bars').update(id, payload.sub.id, data)
 
@@ -322,6 +345,13 @@ barsRoute
       const data = ctx.req.valid('json')
 
       const payload = ctx.get('userPayload')
+
+      if (!(await requireBarOwnerAccount(payload.sub.id))) {
+        return ctx.json(
+          { message: 'Compte bar requis pour gerer les photos du bar.' },
+          403
+        )
+      }
 
       const result = await ctx.get('bars').createPhoto(
         {
@@ -446,6 +476,16 @@ barsRoute
       const data = ctx.req.valid('json')
 
       const payload = ctx.get('userPayload')
+
+      if (!(await requireBarOwnerAccount(payload.sub.id))) {
+        return ctx.json(
+          {
+            message:
+              'Compte bar requis pour gerer les cocktails signature du bar.',
+          },
+          403
+        )
+      }
 
       const result = await ctx.get('bars').createSignatureCocktail(
         {

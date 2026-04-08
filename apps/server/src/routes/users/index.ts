@@ -174,7 +174,7 @@ usersRoute.put(
     tags: ['Users'],
     summary: 'Update current user',
     description:
-      'Updates the profile of the currently authenticated user. Accepts form data.',
+      'Updates the profile of the currently authenticated user.',
     responses: {
       200: {
         description: 'User updated',
@@ -187,22 +187,24 @@ usersRoute.put(
   }),
   isAuth(),
   validator(
-    'form',
+    'json',
     type({
       username: 'string >= 3?',
       email: 'string.email?',
       password: 'string > 7?',
-      phoneNumber: 'string | null?',
-      city: 'string | null?',
-      region: 'string | null?',
-      zipCode: 'string | null?',
+      'isBarOwner?': 'boolean',
     })
   ),
   async (ctx) => {
     const payload = ctx.get('userPayload')
-    const updateDatas = ctx.req.valid('form')
+    const { isBarOwner, ...updateDatas } = ctx.req.valid('json')
 
-    const result = await ctx.get('users').update(payload.sub.id, updateDatas)
+    const result = await ctx.get('users').update(payload.sub.id, {
+      ...updateDatas,
+      ...(typeof isBarOwner === 'boolean'
+        ? { is_bar_owner: isBarOwner }
+        : {}),
+    })
 
     return result
       .andThen((user) => dto(SafeUserSchema, user))

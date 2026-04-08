@@ -85,15 +85,16 @@ const authRoute = new Hono()
         username: 'string >= 3',
         email: 'string.email',
         password: 'string > 8',
+        'isBarOwner?': 'boolean',
       })
     ),
     async (ctx) => {
-      const { username, email, password } = ctx.req.valid('json')
+      const { username, email, password, isBarOwner } = ctx.req.valid('json')
       const COOKIE_SECRET = env.COOKIE_SECRET
 
       const result = await ctx
         .get('auth')
-        .registerUser(username, email, password)
+        .registerUser(username, email, password, isBarOwner ?? false)
         .andThen((credentials) =>
           ctx
             .get('sessionService')
