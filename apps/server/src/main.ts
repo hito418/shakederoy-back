@@ -27,7 +27,7 @@ app
     })
   )
 
-if (process?.env?.NODE_ENV === 'DEV' || process?.env?.NODE_ENV === 'STAGING') {
+if (process?.env?.NODE_ENV === 'DEV') {
   showRoutes(app)
 }
 
