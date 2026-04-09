@@ -1,9 +1,11 @@
 import { errAsync, okAsync } from 'neverthrow'
 import type { SessionPayload } from 'src/features/auth/session.service'
 import { AppError } from 'src/shared/errors'
-import { vi } from 'vitest'
+import { vi, type Mock } from 'vitest'
 
-export function mockSessionService() {
+export function mockSessionService(): {
+  create: Mock; validate: Mock; delete: Mock; deleteAllForUser: Mock; cleanupExpired: Mock
+} {
   return {
     create: vi.fn(),
     validate: vi.fn(),
@@ -13,7 +15,9 @@ export function mockSessionService() {
   }
 }
 
-export function mockAuthService() {
+export function mockAuthService(): {
+  initAdmin: Mock; registerUser: Mock; loginUser: Mock
+} {
   return {
     initAdmin: vi.fn(),
     registerUser: vi.fn(),
@@ -48,7 +52,10 @@ export function stubNoSession(
   )
 }
 
-export function mockDbService() {
+export function mockDbService(): {
+  query: Mock; queryFirst: Mock; queryMany: Mock; insert: Mock;
+  update: Mock; delete: Mock; queryPaginated: Mock; transaction: Mock
+} {
   return {
     query: vi.fn(),
     queryFirst: vi.fn(),

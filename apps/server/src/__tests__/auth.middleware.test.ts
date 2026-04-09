@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest'
-import { Hono } from 'hono'
+import { Hono, type MiddlewareHandler } from 'hono'
 import {
   mockSessionService,
   testUser,
@@ -22,7 +22,7 @@ const { isAuth, optionalAuth } = await import(
 )
 
 function createTestApp(
-  middleware: ReturnType<typeof isAuth>,
+  middleware: MiddlewareHandler,
   sessionSvc: ReturnType<typeof mockSessionService>
 ) {
   return new Hono()

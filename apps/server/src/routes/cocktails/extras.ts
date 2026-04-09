@@ -82,6 +82,10 @@ extrasRoute
       const { cocktailId } = ctx.req.valid('param')
       const { ingredientId, ingredientName, quantity, unit, notes } = ctx.req.valid('json')
 
+      if (!ingredientId) {
+        return ctx.json({ message: 'ingredientId is required' }, 400)
+      }
+
       const result = await ctx.get('extras').createIngredient({
         cocktail_id: cocktailId,
         ingredient_id: ingredientId,

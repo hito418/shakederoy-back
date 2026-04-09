@@ -81,7 +81,7 @@ describe('IngredientsService', () => {
       const result = await service.create({
         name: 'Lime',
         description: 'Fresh lime',
-        category: 'fruit',
+        category: 'garnish',
         is_alcoholic: false,
       })
 
@@ -94,7 +94,7 @@ describe('IngredientsService', () => {
 
       const result = await service.create({
         name: 'Lime',
-        category: 'fruit',
+        category: 'garnish',
         is_alcoholic: false,
       })
 
