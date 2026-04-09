@@ -89,7 +89,7 @@ extrasRoute
       const result = await ctx.get('extras').createIngredient({
         cocktail_id: cocktailId,
         ingredient_id: ingredientId,
-        ingredient_name: ingredientName,
+        // ingredient_name: ingredientName,
         quantity,
         unit,
         notes,
